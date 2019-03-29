@@ -128,7 +128,7 @@ Move_IC_Stmt::Move_IC_Stmt(Tgt_Op inst_op, Ics_Opd * opd1, Ics_Opd * result) {
 }
 
 Move_IC_Stmt & Move_IC_Stmt::operator=(const Move_IC_Stmt & rhs) {
-
+    
 }
 
 Instruction_Descriptor & Move_IC_Stmt::get_inst_op_of_ics() {
