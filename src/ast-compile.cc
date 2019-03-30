@@ -28,8 +28,19 @@ Code_For_Ast & Assignment_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Name_Ast =======================================================
 
 Code_For_Ast & Name_Ast::compile() {
-    auto reg = machine_desc_object.get_new_register<int_reg>();
-    auto load_stmt = new Move_IC_Stmt(load, new Mem_Addr_Opd(*this->variable_symbol_entry), new Register_Addr_Opd(reg));
+    Register_Descriptor * reg;
+    Move_IC_Stmt * load_stmt;
+
+    auto type = this->get_data_type();
+    if (type == int_data_type) {
+        reg = machine_desc_object.get_new_register<int_reg>();
+        load_stmt = new Move_IC_Stmt(load, new Mem_Addr_Opd(*this->variable_symbol_entry), new Register_Addr_Opd(reg));
+    }
+    else if (type == double_data_type) {
+        reg = machine_desc_object.get_new_register<float_reg>();
+        load_stmt = new Move_IC_Stmt(load_d, new Mem_Addr_Opd(*this->variable_symbol_entry), new Register_Addr_Opd(reg));
+    }
+
     auto code = new Code_For_Ast(); code->append_ics(*load_stmt); code->set_reg(reg);
     return *code;
 }
@@ -39,7 +50,16 @@ Code_For_Ast & Name_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 }
 
 Code_For_Ast & Name_Ast::create_store_stmt(Register_Descriptor * store_register) {
-    auto store_stmt = new Move_IC_Stmt(store, new Register_Addr_Opd(store_register), new Mem_Addr_Opd(*this->variable_symbol_entry));
+    Move_IC_Stmt * store_stmt;
+    
+    auto type = this->get_data_type();
+    if (type == int_data_type) {
+        store_stmt = new Move_IC_Stmt(store, new Register_Addr_Opd(store_register), new Mem_Addr_Opd(*this->variable_symbol_entry));
+    }
+    else if (type == double_data_type) {
+        store_stmt = new Move_IC_Stmt(store_d, new Register_Addr_Opd(store_register), new Mem_Addr_Opd(*this->variable_symbol_entry));
+    }
+
     auto code = new Code_For_Ast(); code->append_ics(*store_stmt);
     return *code;
 }
@@ -48,8 +68,19 @@ Code_For_Ast & Name_Ast::create_store_stmt(Register_Descriptor * store_register)
 
 template <class T>
 Code_For_Ast & Number_Ast<T>::compile() {
-    auto reg = machine_desc_object.get_new_register<int_reg>();
-    auto imm_load_stmt = new Move_IC_Stmt(imm_load, new Const_Opd<int>(this->constant), new Register_Addr_Opd(reg));
+    Register_Descriptor * reg;
+    Move_IC_Stmt * imm_load_stmt;
+
+    auto type = this->get_data_type();
+    if (type == int_data_type) {
+        reg = machine_desc_object.get_new_register<int_reg>();
+        imm_load_stmt = new Move_IC_Stmt(imm_load, new Const_Opd<int>(this->constant), new Register_Addr_Opd(reg));
+    }
+    else if (type == double_data_type) {
+        reg = machine_desc_object.get_new_register<float_reg>();
+        imm_load_stmt = new Move_IC_Stmt(imm_load_d, new Const_Opd<double>(this->constant), new Register_Addr_Opd(reg));
+    }
+    
     auto code = new Code_For_Ast(); code->append_ics(*imm_load_stmt); code->set_reg(reg);
     return *code;
 }
