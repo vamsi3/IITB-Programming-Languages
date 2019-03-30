@@ -255,7 +255,13 @@ void Compute_IC_Stmt::set_result(Ics_Opd * io) {
 }
 
 void Compute_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << "[Compute_IC_Stmt][print_icode] " << this->op_desc.get_name() << endl;
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+    this->result->print_ics_opd(file_buffer);
+    file_buffer << " <- "; 
+    this->opd1->print_ics_opd(file_buffer);
+    file_buffer << " , ";
+    this->opd2->print_ics_opd(file_buffer);
+    file_buffer << endl;
 }
 
 void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
