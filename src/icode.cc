@@ -3,6 +3,9 @@
 template class Const_Opd<double>;
 template class Const_Opd<int>;
 
+#define ICODE_ALIGN_SPACE "        "
+#define ICODE_SPACE "          "
+
 ///////////////////////// Instruction Descriptor ///////////////////////////////////
 
 
@@ -26,15 +29,15 @@ Tgt_Op Instruction_Descriptor::get_op() {
 }
 
 string Instruction_Descriptor::get_name() {
-    return this->mnemonic;
+    return this->name;
 }
 
 string Instruction_Descriptor::get_mnemonic() {
-    return this->ic_symbol;
+    return this->mnemonic;
 }
 
 string Instruction_Descriptor::get_ic_symbol() {
-    return this->name;
+    return this->ic_symbol;
 }
 
 Icode_Format Instruction_Descriptor::get_ic_format() {
@@ -62,7 +65,7 @@ Mem_Addr_Opd::Mem_Addr_Opd(Symbol_Table_Entry & se) {
 }
 
 void Mem_Addr_Opd::print_ics_opd(ostream & file_buffer) {
-    file_buffer << "[Mem_Addr_Opd][print_ics_opd]" << endl;
+    file_buffer << this->symbol_entry->get_variable_name();
 }
 
 void Mem_Addr_Opd::print_asm_opd(ostream & file_buffer) {
@@ -88,7 +91,7 @@ Register_Descriptor * Register_Addr_Opd::get_reg() {
 }
 
 void Register_Addr_Opd::print_ics_opd(ostream & file_buffer) {
-    file_buffer << "[Register_Addr_Opd][print_ics_opd]" << endl;
+    file_buffer << this->register_description->get_name();
 
 }
 
@@ -114,7 +117,7 @@ Const_Opd<T>::Const_Opd(T num) {
 
 template <class T>
 void Const_Opd<T>::print_ics_opd(ostream & file_buffer) {
-    file_buffer << "[Const_Opd][print_ics_opd]" << endl;
+    file_buffer << this->num;
 }
 
 template <class T>
@@ -192,7 +195,11 @@ void Move_IC_Stmt::set_result(Ics_Opd * io) {
 }
 
 void Move_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << "[Move_IC_Stmt][print_icode] " << this->op_desc.get_name() << endl;
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+    this->result->print_ics_opd(file_buffer);
+    file_buffer << " <- "; 
+    this->opd1->print_ics_opd(file_buffer);
+    file_buffer << endl;
 }
 
 void Move_IC_Stmt::print_assembly(ostream & file_buffer) {
@@ -345,12 +352,18 @@ void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
 // ============ Code_For_Ast ===================================================
 
 Code_For_Ast::Code_For_Ast() {
-
+    this->ics_list = list<Icode_Stmt *>();
+    this->result_register = new Register_Descriptor(none, "dummy", int_num, int_reg);
 }
 
 Code_For_Ast::Code_For_Ast(list<Icode_Stmt *> & ic_l, Register_Descriptor * reg) {
     this->ics_list = ic_l;
-    this->result_register = reg;
+    if (reg) {
+        this->result_register = reg;
+    }
+    else {
+        this->result_register = new Register_Descriptor(none, "dummy", int_num, int_reg);
+    }
 }
 
 void Code_For_Ast::append_ics(Icode_Stmt & ics) {
