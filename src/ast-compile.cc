@@ -250,13 +250,13 @@ Code_For_Ast & UMinus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Conditional_Expression_Ast =====================================
 
 Code_For_Ast & Conditional_Expression_Ast::compile() {
-
+    cout << "[Conditional_Expression_Ast][compile]" << endl;
 }
 
 // ============ Return_Ast =====================================================
 
 Code_For_Ast & Return_Ast::compile() {
-
+    cout << "[Return_Ast][compile]" << endl;
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
@@ -266,28 +266,105 @@ Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Relational_Expr_Ast ============================================
 
 Code_For_Ast & Relational_Expr_Ast::compile() {
+    auto lhs_condition_code = this->lhs_condition->compile();
+    auto rhs_condition_code = this->rhs_condition->compile();
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    icode_stmt_list.merge(lhs_condition_code.get_icode_list());
+    icode_stmt_list.merge(rhs_condition_code.get_icode_list());
 
+    Register_Descriptor * reg;
+    Tgt_Op * target_op;
+
+    auto type = this->get_data_type();
+    if (type == int_data_type) {
+        reg = machine_desc_object.get_new_register<int_reg>();
+        target_op = new Tgt_Op[6]{sle, slt, sgt, sge, seq, sne};
+    }
+    else if (type == int_data_type) {
+        reg = machine_desc_object.get_new_register<float_reg>();
+        target_op = new Tgt_Op[6]{sle_d, slt_d, sgt_d, sge_d, seq_d, sne_d};
+    }
+    auto rel_stmt = new Compute_IC_Stmt(target_op[this->rel_op], new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), new Register_Addr_Opd(reg));
+    delete target_op;
+    icode_stmt_list.push_back(rel_stmt);
+
+    lhs_condition_code.get_reg()->reset_register_occupied();
+    rhs_condition_code.get_reg()->reset_register_occupied();
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
-// ============ Logical_Expr_Ast ============================================
+// ============ Logical_Expr_Ast ===============================================
 
 Code_For_Ast & Logical_Expr_Ast::compile() {
+    auto icode_stmt_list = list<Icode_Stmt *>();
 
+    Code_For_Ast * lhs_op_code_pointer = NULL;
+    Register_Descriptor * one_reg = NULL;
+    if (this->bool_op == _logical_not) {
+        one_reg = machine_desc_object.get_new_register<int_reg>();
+        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(one_reg)));
+    }
+    else {
+        lhs_op_code_pointer = &this->lhs_op->compile();
+    }
+
+    auto rhs_op_code = this->rhs_op->compile();
+    if (lhs_op_code_pointer) icode_stmt_list.merge(lhs_op_code_pointer->get_icode_list());
+    icode_stmt_list.merge(rhs_op_code.get_icode_list());
+
+    Compute_IC_Stmt * logical_stmt;
+    Tgt_Op target_op[] = {not_t, or_t, and_t};
+    auto reg = machine_desc_object.get_new_register<int_reg>();
+    if (this->bool_op == _logical_not) {
+        logical_stmt = new Compute_IC_Stmt(target_op[this->bool_op], new Register_Addr_Opd(rhs_op_code.get_reg()), new Register_Addr_Opd(one_reg), new Register_Addr_Opd(reg));
+    }
+    else {
+        logical_stmt = new Compute_IC_Stmt(target_op[this->bool_op], new Register_Addr_Opd(lhs_op_code_pointer->get_reg()), new Register_Addr_Opd(rhs_op_code.get_reg()), new Register_Addr_Opd(reg));
+    }
+    icode_stmt_list.push_back(logical_stmt);
+    
+    if (one_reg) one_reg->reset_register_occupied();
+    if (lhs_op_code_pointer) lhs_op_code_pointer->get_reg()->reset_register_occupied();
+    rhs_op_code.get_reg()->reset_register_occupied();
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
-// ============ Selection_Statement_Ast ============================================
+// ============ Selection_Statement_Ast ========================================
 
 Code_For_Ast & Selection_Statement_Ast::compile() {
+    auto cond_code = this->cond->compile();
+    
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    icode_stmt_list.merge(cond_code.get_icode_list());
 
+    auto else_label = this->get_new_label();
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    
+    icode_stmt_list.merge(this->then_part->compile().get_icode_list());
+
+    string if_label;
+    if (this->else_part) {
+        if_label = this->get_new_label();
+        icode_stmt_list.push_back(new Label_IC_Stmt(j, if_label));
+    }
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(label, else_label));
+    
+    if (this->else_part) {
+        icode_stmt_list.merge(this->else_part->compile().get_icode_list());
+        icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
+    }
+
+    return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
 
-// ============ Iteration_Statement_Ast ============================================
+// ============ Iteration_Statement_Ast ========================================
 
 Code_For_Ast & Iteration_Statement_Ast::compile() {
-
+    cout << "[Iteration_Statement_Ast][compile]" << endl;
 }
 
-// ============ Sequence_Ast ============================================
+// ============ Sequence_Ast ===================================================
 
 Code_For_Ast & Sequence_Ast::compile() {
     for (const auto &ast: this->statement_list) {

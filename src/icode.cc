@@ -307,7 +307,13 @@ void Control_Flow_IC_Stmt::set_label(string label) {
 }
 
 void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << "[Control_Flow_IC_Stmt][print_icode] " << this->op_desc.get_name() << endl;
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+    this->opd1->print_ics_opd(file_buffer);
+    file_buffer << " , ";
+    file_buffer << "zero";
+    file_buffer << " : ";
+    file_buffer << "goto " << this->label;
+    file_buffer << endl;
 }
 
 void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
@@ -343,7 +349,14 @@ void Label_IC_Stmt::set_label(string label) {
 }
 
 void Label_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << "[Label_IC_Stmt][print_icode] " << this->op_desc.get_name() << endl;
+    auto op_type = this->op_desc.get_op();
+    if (op_type == j) {
+        file_buffer << ICODE_ALIGN_SPACE << "goto " << this->label;
+    }
+    else {
+        file_buffer << endl << this->label << ":";
+    }
+    file_buffer << endl;
 }
 
 void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
