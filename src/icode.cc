@@ -69,7 +69,7 @@ void Mem_Addr_Opd::print_ics_opd(ostream & file_buffer) {
 }
 
 void Mem_Addr_Opd::print_asm_opd(ostream & file_buffer) {
-    file_buffer << "[Mem_Addr_Opd][print_asm_opd]" << endl;
+    file_buffer << this->symbol_entry->get_start_offset() << "($fp)";
 }
 
 Mem_Addr_Opd & Mem_Addr_Opd::operator=(const Mem_Addr_Opd & rhs) {
@@ -92,11 +92,10 @@ Register_Descriptor * Register_Addr_Opd::get_reg() {
 
 void Register_Addr_Opd::print_ics_opd(ostream & file_buffer) {
     file_buffer << this->register_description->get_name();
-
 }
 
 void Register_Addr_Opd::print_asm_opd(ostream & file_buffer) {
-    file_buffer << "[Register_Addr_Opd][print_asm_opd]" << endl;
+    file_buffer << "$" << this->register_description->get_name();
 
 }
 
@@ -122,7 +121,7 @@ void Const_Opd<T>::print_ics_opd(ostream & file_buffer) {
 
 template <class T>
 void Const_Opd<T>::print_asm_opd(ostream & file_buffer) {
-    file_buffer << "[Const_Opd][print_asm_opd]" << endl;
+    file_buffer << this->num;
 }
 
 template <class T>
@@ -203,7 +202,20 @@ void Move_IC_Stmt::print_icode(ostream & file_buffer) {
 }
 
 void Move_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << "[Move_IC_Stmt][print_icode] " << this->op_desc.get_mnemonic() << endl;
+    auto op_type = this->op_desc.get_op();
+
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+    
+    if (op_type == store || op_type == store_d) {
+        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", ";  this->result->print_asm_opd(file_buffer);
+    }
+    else {
+        file_buffer << " ";  this->result->print_asm_opd(file_buffer);
+        file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
+    }
+    
+    file_buffer << endl;
 }
 
 
@@ -265,7 +277,11 @@ void Compute_IC_Stmt::print_icode(ostream & file_buffer) {
 }
 
 void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << "[Compute_IC_Stmt][print_assembly] " << this->op_desc.get_mnemonic() << endl;
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+    file_buffer << " ";  this->result->print_asm_opd(file_buffer);
+    file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
+    file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
+    file_buffer << endl;
 }
 
 
@@ -317,7 +333,12 @@ void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
 }
 
 void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << "[Control_Flow_IC_Stmt][print_assembly] " << this->op_desc.get_mnemonic() << endl;
+    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+    file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+    file_buffer << ", ";
+    file_buffer << "$zero";
+    file_buffer << ", " << this->label;
+    file_buffer << endl;
 }
 
 
@@ -360,7 +381,14 @@ void Label_IC_Stmt::print_icode(ostream & file_buffer) {
 }
 
 void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << "[Label_IC_Stmt][print_assembly] " << this->op_desc.get_mnemonic() << endl;
+    auto op_type = this->op_desc.get_op();
+    if (op_type == j) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
+    }
+    else {
+        file_buffer << endl << this->label << ":";
+    }
+    file_buffer << endl;
 }
 
 
