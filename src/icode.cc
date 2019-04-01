@@ -4,7 +4,7 @@ template class Const_Opd<double>;
 template class Const_Opd<int>;
 
 #define ICODE_ALIGN_SPACE "        "
-#define ICODE_SPACE "          "
+#define ICODE_SPACE "\t\t"
 
 ///////////////////////// Instruction Descriptor ///////////////////////////////////
 

@@ -250,7 +250,47 @@ Code_For_Ast & UMinus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Conditional_Expression_Ast =====================================
 
 Code_For_Ast & Conditional_Expression_Ast::compile() {
-    cout << "[Conditional_Expression_Ast][compile]" << endl;
+    // TODO: resolve inconsistency with sclp given
+    auto cond_code = this->cond->compile();
+    auto zero_reg = machine_desc_object.spim_register_table[zero];
+
+    Register_Descriptor * reg;
+    auto type = this->lhs->get_data_type();
+    if (type == int_data_type) {
+        reg = machine_desc_object.get_new_register<int_reg>();
+    }
+    else if (type == double_data_type) {
+        reg = machine_desc_object.get_new_register<float_reg>();
+    }
+
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    icode_stmt_list.merge(cond_code.get_icode_list());
+
+    auto else_label = this->get_new_label();
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+
+    auto lhs_code = this->lhs->compile();
+    icode_stmt_list.merge(lhs_code.get_icode_list());
+
+    icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(lhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
+
+    auto if_label = this->get_new_label();
+    icode_stmt_list.push_back(new Label_IC_Stmt(j, if_label));
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(label, else_label));
+
+    auto rhs_code = this->rhs->compile();
+    icode_stmt_list.merge(rhs_code.get_icode_list());
+
+    icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(rhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
+
+    zero_reg->reset_register_occupied();
+    cond_code.get_reg()->reset_register_occupied();
+    lhs_code.get_reg()->reset_register_occupied();
+    rhs_code.get_reg()->reset_register_occupied();
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
 // ============ Return_Ast =====================================================
@@ -361,7 +401,24 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
 // ============ Iteration_Statement_Ast ========================================
 
 Code_For_Ast & Iteration_Statement_Ast::compile() {
-    cout << "[Iteration_Statement_Ast][compile]" << endl;
+    // cout << "[Iteration_Statement_Ast][compile]" << endl;
+    auto body_label = this->get_new_label();
+    auto cond_label = this->get_new_label();
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    
+    if (!this->is_do_form) {
+        icode_stmt_list.push_back(new Label_IC_Stmt(j, cond_label));
+    }
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(label, body_label));
+    icode_stmt_list.merge(this->body->compile().get_icode_list());
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(label, cond_label));
+    auto cond_code = this->cond->compile();
+    icode_stmt_list.merge(cond_code.get_icode_list());
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(bne, new Register_Addr_Opd(cond_code.get_reg()), body_label));
+    
+    return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
 
 // ============ Sequence_Ast ===================================================
