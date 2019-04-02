@@ -127,6 +127,7 @@ declaration:
 
 integer_variable_list:
 	NAME {
+		$1->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$1, int_data_type, yylineno);
 		variable->set_symbol_scope(current_scope);
 		
@@ -135,6 +136,7 @@ integer_variable_list:
 		$$->push_symbol(variable);
 	}
 |	integer_variable_list ',' NAME {
+		$3->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$3, int_data_type, yylineno);
 		variable->set_symbol_scope(current_scope);
 
@@ -148,6 +150,7 @@ integer_variable_list:
 
 float_variable_list:
 	NAME {
+		$1->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$1, double_data_type, yylineno);
 		variable->set_symbol_scope(current_scope);
 		
@@ -156,6 +159,7 @@ float_variable_list:
 		$$->push_symbol(variable);
 	}
 |	float_variable_list ',' NAME {
+		$3->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$3, double_data_type, yylineno);
 		variable->set_symbol_scope(current_scope);
 
@@ -231,6 +235,7 @@ expression:
 
 variable:
 	NAME {
+		$1->push_back('_');
 		if (local_symbol_table->variable_in_symbol_list_check( *$1)) {
 			$$ = new Name_Ast( *$1, local_symbol_table->get_symbol_table_entry( *$1), yylineno);
 		}

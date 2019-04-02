@@ -3,7 +3,7 @@
 template class Const_Opd<double>;
 template class Const_Opd<int>;
 
-#define ICODE_ALIGN_SPACE "        "
+#define ICODE_ALIGN_SPACE "\t"
 #define ICODE_SPACE "\t\t"
 
 ///////////////////////// Instruction Descriptor ///////////////////////////////////
@@ -62,6 +62,7 @@ Register_Descriptor * Ics_Opd::get_reg() {}
 
 Mem_Addr_Opd::Mem_Addr_Opd(Symbol_Table_Entry & se) {
     this->symbol_entry = &se;
+    this->symbol_entry->set_register(machine_desc_object.spim_register_table[fp]);
 }
 
 void Mem_Addr_Opd::print_ics_opd(ostream & file_buffer) {
@@ -69,7 +70,14 @@ void Mem_Addr_Opd::print_ics_opd(ostream & file_buffer) {
 }
 
 void Mem_Addr_Opd::print_asm_opd(ostream & file_buffer) {
-    file_buffer << this->symbol_entry->get_start_offset() << "($fp)";
+    auto scope = this->symbol_entry->get_symbol_scope();
+    if (scope == global) {
+        file_buffer << this->symbol_entry->get_variable_name();
+    }
+    else if (scope == local) {
+        file_buffer << this->symbol_entry->get_start_offset();
+        file_buffer << "($" << this->symbol_entry->get_register()->get_name() << ")";
+    }
 }
 
 Mem_Addr_Opd & Mem_Addr_Opd::operator=(const Mem_Addr_Opd & rhs) {
