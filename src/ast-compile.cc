@@ -29,6 +29,8 @@ Code_For_Ast & Assignment_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Name_Ast =======================================================
 
 Code_For_Ast & Name_Ast::compile() {
+    // TODO: Check what are the other register related compile functions in symbol_entry are for?
+
     Register_Descriptor * reg;
     Move_IC_Stmt * load_stmt;
 
@@ -251,11 +253,9 @@ Code_For_Ast & UMinus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 // ============ Conditional_Expression_Ast =====================================
 
 Code_For_Ast & Conditional_Expression_Ast::compile() {
-    // TODO: resolve inconsistency with sclp given
-    auto cond_code = this->cond->compile();
-    auto zero_reg = machine_desc_object.spim_register_table[zero];
-
     auto icode_stmt_list = list<Icode_Stmt *>();
+    
+    auto cond_code = this->cond->compile();
     icode_stmt_list.merge(cond_code.get_icode_list());
 
     auto else_label = this->get_new_label();
@@ -266,7 +266,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     icode_stmt_list.merge(lhs_code.get_icode_list());
 
     Register_Descriptor * reg;
-    auto type = this->lhs->get_data_type();
+    auto type = this->lhs->get_data_type(); // NOTE: we expect lhs and rhs to have same datatype, constraint from check_ast
     if (type == int_data_type) {
         reg = machine_desc_object.get_new_register<int_reg>();
     }
@@ -274,6 +274,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
         reg = machine_desc_object.get_new_register<float_reg>();
     }
 
+    auto zero_reg = machine_desc_object.spim_register_table[zero];
     icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(lhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
     lhs_code.get_reg()->reset_register_occupied();
 
@@ -298,7 +299,11 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
 
 Code_For_Ast & Return_Ast::compile() {
     // This should not be called as of Assignment 5!
-    // cout << "[Return_Ast][compile]" << endl;
+
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, ""));
+    
+    return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
@@ -460,17 +465,21 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
 // ============ Print_Ast ======================================================
 
 Code_For_Ast & Print_Ast::compile() {
-    // TODO: Need to change this when get_new_register<argument> works.
-    // Currently, this code is not working perfectly as expected.
-
     auto icode_stmt_list = list<Icode_Stmt *>();
+    auto v0_reg = machine_desc_object.spim_register_table[v0];
+    icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(v0_reg)));
 
     auto var_code = this->var->compile();
-    icode_stmt_list.merge(var_code.get_icode_list());
+    auto arg_load_stmt = var_code.get_icode_list().back();
+    auto a0_reg = machine_desc_object.spim_register_table[a0];
+    arg_load_stmt->set_result(new Register_Addr_Opd(a0_reg));
+    icode_stmt_list.push_back(arg_load_stmt);
     var_code.get_reg()->reset_register_occupied();
     
-    Tgt_Op op = bc1t; op = (Tgt_Op) (op + 1); // op is 'print'
+    Tgt_Op op = bc1t; op = (Tgt_Op) (op + 1); // TODO: overcome this workaround. op is 'print'
     icode_stmt_list.push_back(new Label_IC_Stmt(op, ""));
 
+    a0_reg->reset_register_occupied();
+    v0_reg->reset_register_occupied();
     return *(new Code_For_Ast(icode_stmt_list, NULL));
 }

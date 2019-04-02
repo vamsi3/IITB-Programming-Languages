@@ -8,7 +8,7 @@ Local_Environment interpreter_global_table;
 Eval_Result & Program::evaluate()
 {
 	Procedure * main_proc = procedure;
-	CHECK_INPUT_AND_ABORT(((main_proc != NULL) && (main_proc->get_proc_name() == "main_")), 
+	CHECK_INPUT_AND_ABORT(((main_proc != NULL) && (main_proc->get_proc_name() == "main")), 
 		"No main function found in the program", NO_FILE_LINE);
 
 	global_symbol_table.create(interpreter_global_table);
