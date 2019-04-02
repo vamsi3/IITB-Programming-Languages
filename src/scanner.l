@@ -13,13 +13,14 @@ delimiter                       [,;?:{}()]
 
 {whitespace}                    ;
 
-"while"                         { store_token_name("WHILE", yytext, yylineno); return WHILE; }
 "do"                            { store_token_name("DO", yytext, yylineno); return DO; }
 "if"                            { store_token_name("IF", yytext, yylineno); return IF; }
 "else"                          { store_token_name("ELSE", yytext, yylineno); return ELSE; }
-"int"                           { store_token_name("INTEGER", yytext, yylineno); return INTEGER; }
-"void"                          { store_token_name("VOID", yytext, yylineno); return VOID; }
 "float"                         { store_token_name("FLOAT", yytext, yylineno); return FLOAT; }
+"int"                           { store_token_name("INTEGER", yytext, yylineno); return INTEGER; }
+"print"                         { store_token_name("PRINT", yytext, yylineno); return PRINT; }
+"void"                          { store_token_name("VOID", yytext, yylineno); return VOID; }
+"while"                         { store_token_name("WHILE", yytext, yylineno); return WHILE; }
 
 "<"                             { store_token_name("LESS_THAN", yytext, yylineno); return LESS_THAN; }
 "<="                            { store_token_name("LESS_THAN_EQUAL", yytext, yylineno); return LESS_THAN_EQUAL; }

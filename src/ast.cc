@@ -3,13 +3,13 @@
 template class Number_Ast<double>;
 template class Number_Ast<int>;
 
-// =====================================================
+// =============================================================================
 
 void error(string msg, int lineno) {
     cout << "cs316: Error: File: " << "" << " Line: " << lineno << ": " << msg << endl;
 }
 
-// =================== Ast =============================
+// =================== Ast =====================================================
 
 int Ast::labelCounter;
 
@@ -56,7 +56,7 @@ void Ast::set_value_of_evaluation(Local_Environment & eval_env, Eval_Result & re
 }
 
 
-// =================== Assignment_Ast =============================
+// =================== Assignment_Ast ==========================================
 
 Assignment_Ast::Assignment_Ast(Ast * temp_lhs, Ast * temp_rhs, int line) {
     this->lhs = temp_lhs;
@@ -80,7 +80,7 @@ void Assignment_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Name_Ast =============================
+// =================== Name_Ast ================================================
 
 Name_Ast::Name_Ast(string & name, Symbol_Table_Entry & var_entry, int line) {
     this->variable_symbol_entry = &var_entry;
@@ -107,7 +107,7 @@ void Name_Ast::print(ostream & file_buffer) {
 
 
 
-// =================== Number_Ast =============================
+// =================== Number_Ast ==============================================
 
 template <class T>
 Number_Ast<T>::Number_Ast(T number, Data_Type constant_data_type, int line) {
@@ -143,7 +143,7 @@ void Number_Ast<T>::print(ostream & file_buffer) {
 }
 
 
-// =================== Arithmetic_Expr_Ast =============================
+// =================== Arithmetic_Expr_Ast =====================================
 
 Data_Type Arithmetic_Expr_Ast::get_data_type() {
     return this->node_data_type;
@@ -161,7 +161,7 @@ bool Arithmetic_Expr_Ast::check_ast() {
 }
 
 
-// =================== Plus_Ast =============================
+// =================== Plus_Ast ================================================
 
 Plus_Ast::Plus_Ast(Ast * l, Ast * r, int line) {
     this->lhs = l;
@@ -178,7 +178,7 @@ void Plus_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Minus_Ast =============================
+// =================== Minus_Ast ===============================================
 
 Minus_Ast::Minus_Ast(Ast * l, Ast * r, int line) {
     this->lhs = l;
@@ -195,7 +195,7 @@ void Minus_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Divide_Ast =============================
+// =================== Divide_Ast ==============================================
 
 Divide_Ast::Divide_Ast(Ast * l, Ast * r, int line) {
     this->lhs = l;
@@ -212,7 +212,7 @@ void Divide_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Mult_Ast =============================
+// =================== Mult_Ast ================================================
 
 Mult_Ast::Mult_Ast(Ast * l, Ast * r, int line) {
     this->lhs = l;
@@ -229,7 +229,7 @@ void Mult_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== UMinus_Ast =============================
+// =================== UMinus_Ast ==============================================
 
 UMinus_Ast::UMinus_Ast(Ast * l, Ast * r, int line) {
     this->lhs = l;
@@ -245,7 +245,7 @@ void UMinus_Ast::print(ostream & file_buffer) {
 }
 
 
-// ============= Conditional_Expression_Ast ===================
+// ============= Conditional_Expression_Ast ====================================
 
 Conditional_Expression_Ast::Conditional_Expression_Ast(Ast* cond, Ast* l, Ast* r, int line) {
     this->cond = cond;
@@ -265,7 +265,7 @@ void Conditional_Expression_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Return_Ast =============================
+// =================== Return_Ast ==============================================
 
 void Return_Ast::print(ostream & file_buffer) {
     string return_data_types[] = {"void", "int", "float"};
@@ -273,7 +273,7 @@ void Return_Ast::print(ostream & file_buffer) {
 }
 
 
-// ==================== Relational_Expr_Ast ===================
+// ==================== Relational_Expr_Ast ====================================
 
 Relational_Expr_Ast::Relational_Expr_Ast(Ast * lhs, Relational_Op rop, Ast * rhs, int line) {
     this->rel_op = rop;
@@ -307,7 +307,7 @@ void Relational_Expr_Ast::print(ostream & file_buffer) {
 }
 
 
-// ==================== Logical_Expr_Ast ======================
+// ==================== Logical_Expr_Ast =======================================
 
 Logical_Expr_Ast::Logical_Expr_Ast(Ast * lhs, Logical_Op bop, Ast * rhs, int line) {
     this->bool_op = bop;
@@ -340,7 +340,7 @@ void Logical_Expr_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Selection_Statement_Ast ================
+// =================== Selection_Statement_Ast =================================
 
 
 Selection_Statement_Ast::Selection_Statement_Ast(Ast * cond,Ast* then_part, Ast* else_part, int line) {
@@ -373,7 +373,7 @@ void Selection_Statement_Ast::print(ostream & file_buffer) {
     }
 }
 
-// =================== Iteration_Statement_Ast ================
+// =================== Iteration_Statement_Ast =================================
 
 Iteration_Statement_Ast::Iteration_Statement_Ast(Ast * cond, Ast* body, int line, bool do_form) {
     this->cond = cond;
@@ -408,7 +408,7 @@ void Iteration_Statement_Ast::print(ostream & file_buffer) {
     }
 }
 
-// =================== Sequence_Ast ===========================
+// =================== Sequence_Ast ============================================
 
 Sequence_Ast::Sequence_Ast(int line) {
     this->lineno = line;
@@ -425,4 +425,15 @@ void Sequence_Ast::print(ostream & file_buffer) {
         file_buffer << endl;
         child_ast->print(file_buffer);
     }
+}
+
+// =================== Print_Ast ===============================================
+
+Print_Ast::Print_Ast(Ast *v, int line) {
+    this->var = v;
+}
+
+void Print_Ast::print(ostream & file_buffer) {
+    file_buffer << endl << AST_SPACE << "Print :";
+    file_buffer << endl << AST_SUB_NODE_SPACE << "("; this->var->print(file_buffer); file_buffer << ")";
 }

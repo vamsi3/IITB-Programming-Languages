@@ -1,3 +1,6 @@
 yoursclp
 out.*
 test*.*
+parser.tab.h
+parser.tab.c
+lex.yy.c

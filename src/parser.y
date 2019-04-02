@@ -26,26 +26,27 @@
 	Procedure * procedure;
 }
 
-%token	 				INTEGER
-%token  <string_value>  NAME
-%token  				ASSIGN
-%token  				FLOAT
-%token	<integer_value> INTEGER_NUMBER
-%token	<double_value>  DOUBLE_NUMBER
-%token  				VOID
-%token  				LESS_THAN
-%token  				GREATER_THAN
-%token  				LESS_THAN_EQUAL
-%token  				GREATER_THAN_EQUAL
-%token  				EQUAL
-%token  				NOT_EQUAL
 %token  				AND
-%token  				OR
-%token 					NOT
-%token  				WHILE
-%token  				IF
-%token  				ELSE
+%token  				ASSIGN
 %token  				DO
+%token	<double_value>  DOUBLE_NUMBER
+%token  				ELSE
+%token  				EQUAL
+%token  				FLOAT
+%token  				GREATER_THAN
+%token  				GREATER_THAN_EQUAL
+%token  				IF
+%token	 				INTEGER
+%token	<integer_value> INTEGER_NUMBER
+%token  				LESS_THAN
+%token  				LESS_THAN_EQUAL
+%token  <string_value>  NAME
+%token 					NOT
+%token  				NOT_EQUAL
+%token  				OR
+%token					PRINT
+%token  				VOID
+%token  				WHILE
 
 %nonassoc "then" 
 %nonassoc ELSE
@@ -62,7 +63,7 @@
 
 
 %type	<ast_list>		statement_list optional_statement_list
-%type	<ast>			variable constant expression conditional_statement assignment_statement sequence while_statement do_while_statement if_statement if_else_statement statement_list_basic1 statement_list_basic
+%type	<ast>			variable constant expression conditional_statement assignment_statement sequence while_statement do_while_statement if_statement if_else_statement statement_list_basic1 statement_list_basic print_statement
 %type	<symbol_table>	integer_variable_list float_variable_list declaration variable_declaration variable_declaration_list optional_variable_declaration_list
 %type	<procedure>		procedure
 
@@ -188,6 +189,7 @@ statement_list_basic1:
 | 	do_while_statement { $$=$1; }
 |	if_statement { $$=$1; }
 |	if_else_statement { $$=$1; }
+|	print_statement { $$=$1; }
 ;
 
 statement_list:
@@ -283,12 +285,18 @@ do_while_statement:
 	}
 ;
 
+print_statement:
+	PRINT variable ';' {
+		$$ = new Print_Ast($2, yylineno);
+	}
+;
+
 sequence:
 	statement_list_basic1 {
 		auto seq = new Sequence_Ast(yylineno);
 		seq->ast_push_back($1);
 		$$ = seq;
-	}	
+	}
 |	'{' statement_list '}' {
 		auto seq = new Sequence_Ast(yylineno);
 		for (const auto &child_ast: *$2) {

@@ -382,6 +382,9 @@ void Label_IC_Stmt::print_icode(ostream & file_buffer) {
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << "goto " << this->label;
     }
+    else if (op_type == print || op_type == ret_inst) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name();
+    }
     else {
         file_buffer << endl << this->label << ":";
     }
@@ -392,6 +395,9 @@ void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
     auto op_type = this->op_desc.get_op();
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
+    }
+    else if (op_type == print || op_type == ret_inst) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
     }
     else {
         file_buffer << endl << this->label << ":";

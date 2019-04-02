@@ -297,7 +297,8 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
 // ============ Return_Ast =====================================================
 
 Code_For_Ast & Return_Ast::compile() {
-    cout << "[Return_Ast][compile]" << endl;
+    // This should not be called as of Assignment 5!
+    // cout << "[Return_Ast][compile]" << endl;
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
@@ -454,4 +455,22 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
     for (const auto &icode_stmt: this->sa_icode_list) {
         icode_stmt->print_icode(file_buffer);
     }
+}
+
+// ============ Print_Ast ======================================================
+
+Code_For_Ast & Print_Ast::compile() {
+    // TODO: Need to change this when get_new_register<argument> works.
+    // Currently, this code is not working perfectly as expected.
+
+    auto icode_stmt_list = list<Icode_Stmt *>();
+
+    auto var_code = this->var->compile();
+    icode_stmt_list.merge(var_code.get_icode_list());
+    var_code.get_reg()->reset_register_occupied();
+    
+    Tgt_Op op = bc1t; op = (Tgt_Op) (op + 1); // op is 'print'
+    icode_stmt_list.push_back(new Label_IC_Stmt(op, ""));
+
+    return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
