@@ -299,11 +299,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
 
 Code_For_Ast & Return_Ast::compile() {
     // This should not be called as of Assignment 5!
-
-    auto icode_stmt_list = list<Icode_Stmt *>();
-    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, ""));
-    
-    return *(new Code_For_Ast(icode_stmt_list, NULL));
+    return *(new Code_For_Ast());
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
@@ -473,11 +469,10 @@ Code_For_Ast & Print_Ast::compile() {
     auto arg_load_stmt = var_code.get_icode_list().back();
     auto a0_reg = machine_desc_object.spim_register_table[a0];
     arg_load_stmt->set_result(new Register_Addr_Opd(a0_reg));
-    icode_stmt_list.push_back(arg_load_stmt);
     var_code.get_reg()->reset_register_occupied();
+    icode_stmt_list.push_back(arg_load_stmt);
     
-    Tgt_Op op = bc1t; op = (Tgt_Op) (op + 1); // TODO: overcome this workaround. op is 'print'
-    icode_stmt_list.push_back(new Label_IC_Stmt(op, ""));
+    icode_stmt_list.push_back(new Print_IC_Stmt());
 
     a0_reg->reset_register_occupied();
     v0_reg->reset_register_occupied();

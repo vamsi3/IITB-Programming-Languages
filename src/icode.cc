@@ -164,6 +164,19 @@ void Icode_Stmt::set_opd2(Ics_Opd * io) {}
 void Icode_Stmt::set_result(Ics_Opd * io) {}
 
 
+// ============ Print_IC_Stmt ===================================================
+
+Print_IC_Stmt::Print_IC_Stmt() {}
+
+void Print_IC_Stmt::print_icode(ostream & file_buffer) {
+    file_buffer << ICODE_ALIGN_SPACE << machine_desc_object.spim_instruction_table[print]->get_name() << endl;
+}
+
+void Print_IC_Stmt::print_assembly(ostream & file_buffer) {
+    file_buffer << ICODE_ALIGN_SPACE << machine_desc_object.spim_instruction_table[print]->get_mnemonic() << endl;
+}
+
+
 // ============ Move_IC_Stmt ===================================================
 
 Move_IC_Stmt::Move_IC_Stmt(Tgt_Op inst_op, Ics_Opd * opd1, Ics_Opd * result) {
@@ -382,9 +395,6 @@ void Label_IC_Stmt::print_icode(ostream & file_buffer) {
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << "goto " << this->label;
     }
-    else if (op_type == print || op_type == ret_inst) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name();
-    }
     else {
         file_buffer << endl << this->label << ":";
     }
@@ -395,9 +405,6 @@ void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
     auto op_type = this->op_desc.get_op();
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
-    }
-    else if (op_type == print || op_type == ret_inst) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
     }
     else {
         file_buffer << endl << this->label << ":";
@@ -419,12 +426,7 @@ Code_For_Ast::Code_For_Ast() {
 
 Code_For_Ast::Code_For_Ast(list<Icode_Stmt *> & ic_l, Register_Descriptor * reg) {
     this->ics_list = ic_l;
-    if (reg) {
-        this->result_register = reg;
-    }
-    else {
-        this->result_register = new Register_Descriptor(none, "dummy", int_num, int_reg);
-    }
+    this->result_register = (reg)? reg : new Register_Descriptor(none, "dummy", int_num, int_reg);
 }
 
 void Code_For_Ast::append_ics(Icode_Stmt & ics) {
