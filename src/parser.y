@@ -58,7 +58,7 @@
 %left '+' '-'
 %left '*' '/'
 %right NOT
-%right UMINUS
+%right "uminus"
 
 
 
@@ -227,7 +227,7 @@ expression:
 	variable { $$ = $1; }
 |	constant { $$ = $1; }
 |	'(' expression ')' { $$ = $2; }
-|	'-' expression { $$ = new UMinus_Ast($2, NULL, yylineno); if (!$$->check_ast()) ast_error = true; }
+|	'-' expression %prec "uminus" { $$ = new UMinus_Ast($2, NULL, yylineno); if (!$$->check_ast()) ast_error = true; }
 |	expression '+' expression { $$ = new Plus_Ast($1, $3, yylineno); if (!$$->check_ast()) ast_error = true; }
 |	expression '-' expression { $$ = new Minus_Ast($1, $3, yylineno); if (!$$->check_ast()) ast_error = true; }
 |	expression '*' expression { $$ = new Mult_Ast($1, $3, yylineno); if (!$$->check_ast()) ast_error = true; }

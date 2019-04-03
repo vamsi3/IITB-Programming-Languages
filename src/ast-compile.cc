@@ -3,6 +3,8 @@
 template class Number_Ast<double>;
 template class Number_Ast<int>;
 
+bool rel_op_switch;
+
 // ============ Ast ============================================================
 
 Code_For_Ast & Ast::create_store_stmt(Register_Descriptor * store_register) {
@@ -14,9 +16,9 @@ Code_For_Ast & Ast::create_store_stmt(Register_Descriptor * store_register) {
 Code_For_Ast & Assignment_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
     auto store_code = this->lhs->create_store_stmt(rhs_code.get_reg());
-    icode_stmt_list.merge(store_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), store_code.get_icode_list());
     
     rhs_code.get_reg()->reset_register_occupied();
     return *(new Code_For_Ast(icode_stmt_list, NULL));
@@ -98,9 +100,9 @@ Code_For_Ast & Number_Ast<T>::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & Plus_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
     auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
 
     Register_Descriptor * reg;
     Compute_IC_Stmt * add_stmt;
@@ -130,9 +132,9 @@ Code_For_Ast & Plus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & Minus_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
     auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
 
     Register_Descriptor * reg;
     Compute_IC_Stmt * sub_stmt;
@@ -162,9 +164,9 @@ Code_For_Ast & Minus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & Divide_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
     auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
 
     Register_Descriptor * reg;
     Compute_IC_Stmt * div_stmt;
@@ -194,9 +196,9 @@ Code_For_Ast & Divide_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & Mult_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
     auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
 
     Register_Descriptor * reg;
     Compute_IC_Stmt * mul_stmt;
@@ -226,7 +228,7 @@ Code_For_Ast & Mult_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & UMinus_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
 
     Register_Descriptor * reg;
     Move_IC_Stmt * uminus_stmt;
@@ -256,14 +258,8 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     
     auto cond_code = this->cond->compile();
-    icode_stmt_list.merge(cond_code.get_icode_list());
-
-    auto else_label = this->get_new_label();
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
-    cond_code.get_reg()->reset_register_occupied();
-
     auto lhs_code = this->lhs->compile();
-    icode_stmt_list.merge(lhs_code.get_icode_list());
+    auto rhs_code = this->rhs->compile();
 
     Register_Descriptor * reg;
     auto type = this->lhs->get_data_type(); // NOTE: we expect lhs and rhs to have same datatype, constraint from check_ast
@@ -273,25 +269,38 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     else if (type == double_data_type) {
         reg = machine_desc_object.get_new_register<float_reg>();
     }
+    
+    icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
+
+    auto else_label = this->get_new_label();
+    if (cond_code.get_reg()->get_register() == none) {
+        auto target_op = (rel_op_switch)? bc1t : bc1f;
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    }
+    else {
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    }
+
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
 
     auto zero_reg = machine_desc_object.spim_register_table[zero];
     icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(lhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
-    lhs_code.get_reg()->reset_register_occupied();
 
     auto if_label = this->get_new_label();
     icode_stmt_list.push_back(new Label_IC_Stmt(j, if_label));
 
     icode_stmt_list.push_back(new Label_IC_Stmt(label, else_label));
 
-    auto rhs_code = this->rhs->compile();
-    icode_stmt_list.merge(rhs_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_code.get_icode_list());
 
     icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(rhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
-    rhs_code.get_reg()->reset_register_occupied();
-    zero_reg->reset_register_occupied();
 
     icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
 
+    cond_code.get_reg()->reset_register_occupied();
+    lhs_code.get_reg()->reset_register_occupied();
+    rhs_code.get_reg()->reset_register_occupied();
+    zero_reg->reset_register_occupied();
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
@@ -311,30 +320,30 @@ Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 Code_For_Ast & Relational_Expr_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto lhs_condition_code = this->lhs_condition->compile();
-    icode_stmt_list.merge(lhs_condition_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), lhs_condition_code.get_icode_list());
     auto rhs_condition_code = this->rhs_condition->compile();
-    icode_stmt_list.merge(rhs_condition_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_condition_code.get_icode_list());
 
-    Register_Descriptor * reg;
-    Tgt_Op * target_op;
     auto type = this->get_data_type();
     if (type == int_data_type) {
-        reg = machine_desc_object.get_new_register<int_reg>();
-        target_op = new Tgt_Op[6]{sle, slt, sgt, sge, seq, sne};
+        auto reg = machine_desc_object.get_new_register<int_reg>();
+        Tgt_Op target_op[6] = {sle, slt, sgt, sge, seq, sne};
+        auto rel_stmt = new Compute_IC_Stmt(target_op[this->rel_op], new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), new Register_Addr_Opd(reg));
+        icode_stmt_list.push_back(rel_stmt);
+        lhs_condition_code.get_reg()->reset_register_occupied();
+        rhs_condition_code.get_reg()->reset_register_occupied();
+        return *(new Code_For_Ast(icode_stmt_list, reg));
     }
-    else if (type == int_data_type) {
-        reg = machine_desc_object.get_new_register<float_reg>();
-        target_op = new Tgt_Op[6]{sle_d, slt_d, sgt_d, sge_d, seq_d, sne_d};
+    else if (type == double_data_type) {
+        Tgt_Op target_op[6] = {sle_d, slt_d, sgt_d, sge_d, seq_d, sne_d};
+        auto op = target_op[this->rel_op];
+        rel_op_switch = (op == sge_d || op == sgt_d || op == sne_d);
+        auto rel_stmt = new Compute_IC_Stmt(op, new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), NULL);
+        icode_stmt_list.push_back(rel_stmt);
+        lhs_condition_code.get_reg()->reset_register_occupied();
+        rhs_condition_code.get_reg()->reset_register_occupied();
+        return *(new Code_For_Ast(icode_stmt_list, NULL));
     }
-
-    auto rel_stmt = new Compute_IC_Stmt(target_op[this->rel_op], new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), new Register_Addr_Opd(reg));
-    icode_stmt_list.push_back(rel_stmt);
-    
-    delete target_op;
-    lhs_condition_code.get_reg()->reset_register_occupied();
-    rhs_condition_code.get_reg()->reset_register_occupied();
-    
-    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
 // ============ Logical_Expr_Ast ===============================================
@@ -353,8 +362,8 @@ Code_For_Ast & Logical_Expr_Ast::compile() {
     }
 
     auto rhs_op_code = this->rhs_op->compile();
-    if (lhs_op_code_pointer) icode_stmt_list.merge(lhs_op_code_pointer->get_icode_list());
-    icode_stmt_list.merge(rhs_op_code.get_icode_list());
+    if (lhs_op_code_pointer) icode_stmt_list.splice(icode_stmt_list.end(), lhs_op_code_pointer->get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), rhs_op_code.get_icode_list());
 
     Compute_IC_Stmt * logical_stmt;
     Tgt_Op target_op[] = {not_t, or_t, and_t};
@@ -380,14 +389,20 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     
     auto cond_code = this->cond->compile();
-    icode_stmt_list.merge(cond_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
 
     auto else_label = this->get_new_label();
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    if (cond_code.get_reg()->get_register() == none) {
+        auto target_op = (rel_op_switch)? bc1t : bc1f;
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    }
+    else {
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    }
     cond_code.get_reg()->reset_register_occupied();
 
     auto then_code = this->then_part->compile();
-    icode_stmt_list.merge(then_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), then_code.get_icode_list());
     then_code.get_reg()->reset_register_occupied();
 
     string if_label;
@@ -400,7 +415,7 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
     
     if (this->else_part) {
         auto else_code = this->else_part->compile();
-        icode_stmt_list.merge(else_code.get_icode_list());
+        icode_stmt_list.splice(icode_stmt_list.end(), else_code.get_icode_list());
         else_code.get_reg()->reset_register_occupied();
         icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
     }
@@ -422,14 +437,22 @@ Code_For_Ast & Iteration_Statement_Ast::compile() {
 
     icode_stmt_list.push_back(new Label_IC_Stmt(label, body_label));
     auto body_code = this->body->compile();
-    icode_stmt_list.merge(body_code.get_icode_list());
+    icode_stmt_list.splice(icode_stmt_list.end(), body_code.get_icode_list());
     body_code.get_reg()->reset_register_occupied();
 
     icode_stmt_list.push_back(new Label_IC_Stmt(label, cond_label));
 
     auto cond_code = this->cond->compile();
-    icode_stmt_list.merge(cond_code.get_icode_list());
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(bne, new Register_Addr_Opd(cond_code.get_reg()), body_label));
+    icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
+
+    if (cond_code.get_reg()->get_register() == none) {
+        auto target_op = (rel_op_switch)? bc1f : bc1t;
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), body_label));
+    }
+    else {
+        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(bne, new Register_Addr_Opd(cond_code.get_reg()), body_label));
+    }
+
     cond_code.get_reg()->reset_register_occupied();
 
     return *(new Code_For_Ast(icode_stmt_list, NULL));
@@ -440,7 +463,7 @@ Code_For_Ast & Iteration_Statement_Ast::compile() {
 Code_For_Ast & Sequence_Ast::compile() {
     for (const auto &ast: this->statement_list) {
         auto code = ast->compile();
-        this->sa_icode_list.merge(code.get_icode_list());
+        this->sa_icode_list.splice(this->sa_icode_list.end(), code.get_icode_list());
         code.get_reg()->reset_register_occupied();
     }
     return *(new Code_For_Ast(this->sa_icode_list, NULL));
@@ -462,19 +485,33 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
 
 Code_For_Ast & Print_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
+    auto type = this->var->get_data_type();
     auto v0_reg = machine_desc_object.spim_register_table[v0];
-    icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(v0_reg)));
+
+    if (type == int_data_type) {
+        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(v0_reg)));
+    }
+    else if (type == double_data_type) {
+        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(3), new Register_Addr_Opd(v0_reg)));
+    }
 
     auto var_code = this->var->compile();
     auto arg_load_stmt = var_code.get_icode_list().back();
-    auto a0_reg = machine_desc_object.spim_register_table[a0];
-    arg_load_stmt->set_result(new Register_Addr_Opd(a0_reg));
+    
+    Register_Descriptor * print_reg;
+    if (type == int_data_type) {
+        print_reg = machine_desc_object.spim_register_table[a0];
+    }
+    else if (type == double_data_type) {
+        print_reg = machine_desc_object.spim_register_table[f12];
+    }
+    arg_load_stmt->set_result(new Register_Addr_Opd(print_reg));
     var_code.get_reg()->reset_register_occupied();
     icode_stmt_list.push_back(arg_load_stmt);
     
     icode_stmt_list.push_back(new Print_IC_Stmt());
 
-    a0_reg->reset_register_occupied();
+    print_reg->reset_register_occupied();
     v0_reg->reset_register_occupied();
     return *(new Code_For_Ast(icode_stmt_list, NULL));
 }

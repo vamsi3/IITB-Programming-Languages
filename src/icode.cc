@@ -91,7 +91,7 @@ Mem_Addr_Opd & Mem_Addr_Opd::operator=(const Mem_Addr_Opd & rhs) {
 // ============ Register_Addr_Opd ==============================================
 
 Register_Addr_Opd::Register_Addr_Opd(Register_Descriptor * rd) {
-    this->register_description = rd;
+    this->register_description = (rd)? rd : new Register_Descriptor(none, "dummy", int_num, int_reg);
 }
 
 Register_Descriptor * Register_Addr_Opd::get_reg() {
@@ -288,21 +288,40 @@ void Compute_IC_Stmt::set_result(Ics_Opd * io) {
 }
 
 void Compute_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-    this->result->print_ics_opd(file_buffer);
-    file_buffer << " <- "; 
-    this->opd1->print_ics_opd(file_buffer);
-    file_buffer << " , ";
-    this->opd2->print_ics_opd(file_buffer);
-    file_buffer << endl;
+    auto op = this->get_inst_op_of_ics();
+    if (op.get_ic_format() == i_o1_op_o2) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        this->opd1->print_ics_opd(file_buffer);
+        file_buffer << " , ";
+        this->opd2->print_ics_opd(file_buffer);
+        file_buffer << endl;
+    }
+    else {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        this->result->print_ics_opd(file_buffer);
+        file_buffer << " <- "; 
+        this->opd1->print_ics_opd(file_buffer);
+        file_buffer << " , ";
+        this->opd2->print_ics_opd(file_buffer);
+        file_buffer << endl;
+    }
 }
 
 void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-    file_buffer << " ";  this->result->print_asm_opd(file_buffer);
-    file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
-    file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
-    file_buffer << endl;
+    auto op = this->get_inst_op_of_ics();
+    if (op.get_assembly_format() == a_op_o1_o2) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
+        file_buffer << endl; 
+    }
+    else {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " ";  this->result->print_asm_opd(file_buffer);
+        file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
+        file_buffer << endl;
+    }
 }
 
 
@@ -344,22 +363,38 @@ void Control_Flow_IC_Stmt::set_label(string label) {
 }
 
 void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-    this->opd1->print_ics_opd(file_buffer);
-    file_buffer << " , ";
-    file_buffer << "zero";
-    file_buffer << " : ";
-    file_buffer << "goto " << this->label;
-    file_buffer << endl;
+    auto op = this->get_inst_op_of_ics();
+    if (op.get_ic_format() == i_op_st) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        file_buffer << " " << this->label;
+        file_buffer << endl;
+    }
+    else {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        this->opd1->print_ics_opd(file_buffer);
+        file_buffer << " , ";
+        file_buffer << "zero";
+        file_buffer << " : ";
+        file_buffer << "goto " << this->label;
+        file_buffer << endl;
+    }
 }
 
 void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-    file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
-    file_buffer << ", ";
-    file_buffer << "$zero";
-    file_buffer << ", " << this->label;
-    file_buffer << endl;
+    auto op = this->get_inst_op_of_ics();
+    if (op.get_assembly_format() == a_op_st) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " " << this->label;
+        file_buffer << endl;
+    }
+    else {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", ";
+        file_buffer << "$zero";
+        file_buffer << ", " << this->label;
+        file_buffer << endl;
+    }
 }
 
 

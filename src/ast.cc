@@ -281,7 +281,7 @@ Relational_Expr_Ast::Relational_Expr_Ast(Ast * lhs, Relational_Op rop, Ast * rhs
     this->rhs_condition = rhs;
     this->lineno = line;
     this->ast_num_child = binary_arity;
-    this->node_data_type = int_data_type;
+    this->node_data_type = this->lhs_condition->get_data_type();
 }
 
 Data_Type Relational_Expr_Ast::get_data_type() {
