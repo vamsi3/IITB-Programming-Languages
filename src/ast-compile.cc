@@ -260,6 +260,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     auto cond_code = this->cond->compile();
     auto lhs_code = this->lhs->compile();
     auto rhs_code = this->rhs->compile();
+    auto zero_reg = machine_desc_object.spim_register_table[zero];
 
     Register_Descriptor * reg;
     auto type = this->lhs->get_data_type(); // NOTE: we expect lhs and rhs to have same datatype, constraint from check_ast
@@ -273,17 +274,13 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
 
     auto else_label = this->get_new_label();
-    if (cond_code.get_reg()->get_register() == none) {
-        auto target_op = (rel_op_switch)? bc1t : bc1f;
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
-    }
-    else {
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
-    }
+    Tgt_Op branch_op;
+    if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1t : bc1f;
+    else branch_op = beq;
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
 
     icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
 
-    auto zero_reg = machine_desc_object.spim_register_table[zero];
     icode_stmt_list.push_back(new Compute_IC_Stmt(or_t, new Register_Addr_Opd(lhs_code.get_reg()), new Register_Addr_Opd(zero_reg), new Register_Addr_Opd(reg))); 
 
     auto if_label = this->get_new_label();
@@ -301,6 +298,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     lhs_code.get_reg()->reset_register_occupied();
     rhs_code.get_reg()->reset_register_occupied();
     zero_reg->reset_register_occupied();
+
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
@@ -319,31 +317,31 @@ Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 Code_For_Ast & Relational_Expr_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
+    
     auto lhs_condition_code = this->lhs_condition->compile();
     icode_stmt_list.splice(icode_stmt_list.end(), lhs_condition_code.get_icode_list());
     auto rhs_condition_code = this->rhs_condition->compile();
     icode_stmt_list.splice(icode_stmt_list.end(), rhs_condition_code.get_icode_list());
 
+    Register_Descriptor * reg = NULL;
+    Tgt_Op op;
     auto type = this->get_data_type();
     if (type == int_data_type) {
-        auto reg = machine_desc_object.get_new_register<int_reg>();
+        reg = machine_desc_object.get_new_register<int_reg>();
         Tgt_Op target_op[6] = {sle, slt, sgt, sge, seq, sne};
-        auto rel_stmt = new Compute_IC_Stmt(target_op[this->rel_op], new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), new Register_Addr_Opd(reg));
-        icode_stmt_list.push_back(rel_stmt);
-        lhs_condition_code.get_reg()->reset_register_occupied();
-        rhs_condition_code.get_reg()->reset_register_occupied();
-        return *(new Code_For_Ast(icode_stmt_list, reg));
+        op = target_op[this->rel_op];
     }
     else if (type == double_data_type) {
         Tgt_Op target_op[6] = {sle_d, slt_d, sgt_d, sge_d, seq_d, sne_d};
-        auto op = target_op[this->rel_op];
+        op = target_op[this->rel_op];
         rel_op_switch = (op == sge_d || op == sgt_d || op == sne_d);
-        auto rel_stmt = new Compute_IC_Stmt(op, new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), NULL);
-        icode_stmt_list.push_back(rel_stmt);
-        lhs_condition_code.get_reg()->reset_register_occupied();
-        rhs_condition_code.get_reg()->reset_register_occupied();
-        return *(new Code_For_Ast(icode_stmt_list, NULL));
     }
+
+    icode_stmt_list.push_back(new Compute_IC_Stmt(op, new Register_Addr_Opd(lhs_condition_code.get_reg()), new Register_Addr_Opd(rhs_condition_code.get_reg()), new Register_Addr_Opd(reg)));
+    lhs_condition_code.get_reg()->reset_register_occupied();
+    rhs_condition_code.get_reg()->reset_register_occupied();
+
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
 // ============ Logical_Expr_Ast ===============================================
@@ -392,13 +390,11 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
     icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
 
     auto else_label = this->get_new_label();
-    if (cond_code.get_reg()->get_register() == none) {
-        auto target_op = (rel_op_switch)? bc1t : bc1f;
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
-    }
-    else {
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(beq, new Register_Addr_Opd(cond_code.get_reg()), else_label));
-    }
+
+    Tgt_Op branch_op;
+    if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1t : bc1f;
+    else branch_op = beq;
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
     cond_code.get_reg()->reset_register_occupied();
 
     auto then_code = this->then_part->compile();
@@ -445,13 +441,10 @@ Code_For_Ast & Iteration_Statement_Ast::compile() {
     auto cond_code = this->cond->compile();
     icode_stmt_list.splice(icode_stmt_list.end(), cond_code.get_icode_list());
 
-    if (cond_code.get_reg()->get_register() == none) {
-        auto target_op = (rel_op_switch)? bc1f : bc1t;
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(target_op, new Register_Addr_Opd(cond_code.get_reg()), body_label));
-    }
-    else {
-        icode_stmt_list.push_back(new Control_Flow_IC_Stmt(bne, new Register_Addr_Opd(cond_code.get_reg()), body_label));
-    }
+    Tgt_Op branch_op;
+    if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1f : bc1t;
+    else branch_op = bne;
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), body_label));
 
     cond_code.get_reg()->reset_register_occupied();
 

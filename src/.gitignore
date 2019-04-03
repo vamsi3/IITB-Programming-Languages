@@ -5,3 +5,4 @@ test*.*
 parser.tab.h
 parser.tab.c
 lex.yy.c
+*.txt

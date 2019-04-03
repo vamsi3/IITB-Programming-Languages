@@ -4,7 +4,7 @@ template class Const_Opd<double>;
 template class Const_Opd<int>;
 
 #define ICODE_ALIGN_SPACE "\t"
-#define ICODE_SPACE "\t\t"
+#define ICODE_SPACE "    \t"
 
 ///////////////////////// Instruction Descriptor ///////////////////////////////////
 
@@ -215,28 +215,30 @@ void Move_IC_Stmt::set_result(Ics_Opd * io) {
 }
 
 void Move_IC_Stmt::print_icode(ostream & file_buffer) {
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-    this->result->print_ics_opd(file_buffer);
-    file_buffer << " <- "; 
-    this->opd1->print_ics_opd(file_buffer);
-    file_buffer << endl;
+    auto ic_format = this->get_inst_op_of_ics().get_ic_format();
+    if (ic_format == i_r_op_o1) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        this->result->print_ics_opd(file_buffer);
+        file_buffer << " <- "; 
+        this->opd1->print_ics_opd(file_buffer);
+        file_buffer << endl;
+    }
 }
 
 void Move_IC_Stmt::print_assembly(ostream & file_buffer) {
-    auto op_type = this->op_desc.get_op();
-
-    file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-    
-    if (op_type == store || op_type == store_d) {
-        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
-        file_buffer << ", ";  this->result->print_asm_opd(file_buffer);
-    }
-    else {
+    auto asm_format = this->get_inst_op_of_ics().get_assembly_format();
+    if (asm_format == a_op_r_o1) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
         file_buffer << " ";  this->result->print_asm_opd(file_buffer);
         file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << endl;
     }
-    
-    file_buffer << endl;
+    else if (asm_format == a_op_o1_r) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", ";  this->result->print_asm_opd(file_buffer);
+        file_buffer << endl;
+    }
 }
 
 
@@ -288,15 +290,8 @@ void Compute_IC_Stmt::set_result(Ics_Opd * io) {
 }
 
 void Compute_IC_Stmt::print_icode(ostream & file_buffer) {
-    auto op = this->get_inst_op_of_ics();
-    if (op.get_ic_format() == i_o1_op_o2) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-        this->opd1->print_ics_opd(file_buffer);
-        file_buffer << " , ";
-        this->opd2->print_ics_opd(file_buffer);
-        file_buffer << endl;
-    }
-    else {
+    auto ic_format = this->get_inst_op_of_ics().get_ic_format();
+    if (ic_format == i_r_o1_op_o2) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
         this->result->print_ics_opd(file_buffer);
         file_buffer << " <- "; 
@@ -305,22 +300,29 @@ void Compute_IC_Stmt::print_icode(ostream & file_buffer) {
         this->opd2->print_ics_opd(file_buffer);
         file_buffer << endl;
     }
+    else if (ic_format == i_o1_op_o2) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
+        this->opd1->print_ics_opd(file_buffer);
+        file_buffer << " , ";
+        this->opd2->print_ics_opd(file_buffer);
+        file_buffer << endl;
+    }
 }
 
 void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
-    auto op = this->get_inst_op_of_ics();
-    if (op.get_assembly_format() == a_op_o1_o2) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
-        file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
-        file_buffer << endl; 
-    }
-    else {
+    auto asm_format = this->get_inst_op_of_ics().get_assembly_format();
+    if (asm_format == a_op_r_o1_o2) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
         file_buffer << " ";  this->result->print_asm_opd(file_buffer);
         file_buffer << ", "; this->opd1->print_asm_opd(file_buffer);
         file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
         file_buffer << endl;
+    }
+    else if (asm_format == a_op_o1_o2) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
+        file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
+        file_buffer << endl; 
     }
 }
 
@@ -363,13 +365,13 @@ void Control_Flow_IC_Stmt::set_label(string label) {
 }
 
 void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
-    auto op = this->get_inst_op_of_ics();
-    if (op.get_ic_format() == i_op_st) {
+    auto ic_format = this->get_inst_op_of_ics().get_ic_format();
+    if (ic_format == i_op_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
         file_buffer << " " << this->label;
         file_buffer << endl;
     }
-    else {
+    else if (ic_format == i_op_o1_o2_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
         this->opd1->print_ics_opd(file_buffer);
         file_buffer << " , ";
@@ -381,18 +383,18 @@ void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
 }
 
 void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
-    auto op = this->get_inst_op_of_ics();
-    if (op.get_assembly_format() == a_op_st) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-        file_buffer << " " << this->label;
-        file_buffer << endl;
-    }
-    else {
+    auto asm_format = this->get_inst_op_of_ics().get_assembly_format();
+    if (asm_format == a_op_o1_o2_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
         file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
         file_buffer << ", ";
         file_buffer << "$zero";
         file_buffer << ", " << this->label;
+        file_buffer << endl;
+    }
+    else if (asm_format == a_op_st) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << " " << this->label;
         file_buffer << endl;
     }
 }
