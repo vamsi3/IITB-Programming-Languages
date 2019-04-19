@@ -103,25 +103,35 @@ procedure_definition:
 		}
 		optional_statement_list '}' {
 			$1->set_ast_list( *$5);
+			$1->set_proc_is_defined();
 			program_object.set_proc_to_map(proc_name, $1);
 		}
 ;
 
 
 function_signature:
-	VOID NAME '(' optional_fun_param_list ')'  {  
+	VOID NAME '(' optional_fun_param_list ')' {
+			if ( *$2 != "main") {
+				$2->push_back('_');
+			}
 			formal_symbol_table = $4;
 			$$ = new Procedure(void_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
 			proc_name = *$2;
 		}
-|	INTEGER NAME '(' optional_fun_param_list ')'  {  
+|	INTEGER NAME '(' optional_fun_param_list ')' {
+			if ( *$2 != "main") {
+				$2->push_back('_');
+			}
 			formal_symbol_table = $4;
 			$$ = new Procedure(int_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
 			proc_name = *$2;
 		}
-|	FLOAT NAME '(' optional_fun_param_list ')'  {  
+|	FLOAT NAME '(' optional_fun_param_list ')' {
+			if ( *$2 != "main") {
+				$2->push_back('_');
+			}
 			formal_symbol_table = $4;
 			$$ = new Procedure(double_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
@@ -150,6 +160,7 @@ fun_param_list:
 
 fun_param_declaration:
 	INTEGER NAME {
+		$2->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, int_data_type, yylineno);
 		variable->set_symbol_scope(formal);
 		
@@ -158,6 +169,7 @@ fun_param_declaration:
 		$$->push_symbol(variable);
 	}
 |	FLOAT NAME {
+		$2->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, double_data_type, yylineno);
 		variable->set_symbol_scope(formal);
 		
@@ -308,6 +320,7 @@ assignment_statement:
 	/* change the ast_error below */
 function_call:
 	NAME '(' optional_call_param_list ')' {
+		$1->push_back('_');
 		if(!program_object.is_procedure_exists( *$1)) {
 			yyerror("no function exists");
 			exit(1);
@@ -363,11 +376,11 @@ variable:
 		if (local_symbol_table->variable_in_symbol_list_check( *$1)) {
 			$$ = new Name_Ast( *$1, local_symbol_table->get_symbol_table_entry( *$1), yylineno);
 		}
-		else if (program_object.variable_in_symbol_list_check( *$1)) {
-			$$ = new Name_Ast( *$1, program_object.get_symbol_table_entry( *$1), yylineno);
-		}
 		else if (formal_symbol_table->variable_in_symbol_list_check( *$1)) {
 			$$ = new Name_Ast( *$1, formal_symbol_table->get_symbol_table_entry( *$1), yylineno);	
+		}
+		else if (program_object.variable_in_symbol_list_check( *$1)) {
+			$$ = new Name_Ast( *$1, program_object.get_symbol_table_entry( *$1), yylineno);
 		}
 		else {
 			yyerror("Variable has not been declared");

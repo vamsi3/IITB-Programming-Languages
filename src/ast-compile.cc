@@ -522,7 +522,22 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
 // ============ Call_Ast =======================================================
 
 Code_For_Ast & Call_Ast::compile() {
-    
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    int position = 0;
+    auto procedure_prototype = program_object.get_procedure_prototype(this->procedure_name);
+    for (const auto &param: actual_param_list) {
+        position += 1;
+        auto formal_param_name = procedure_prototype->get_variable_in_formal_list(position);
+        auto formal_param_entry = &procedure_prototype->get_formal_param_entry(formal_param_name);
+        auto param_code = param->compile();
+        icode_stmt_list.splice(icode_stmt_list.end(), param_code.get_icode_list());
+        icode_stmt_list.push_back(new Move_IC_Stmt(store, new Register_Addr_Opd(param_code.get_reg()), new Mem_Addr_Opd(*formal_param_entry)));
+        param_code.get_reg()->reset_register_occupied();
+    }
+    icode_stmt_list.push_back(new Label_IC_Stmt(jal, this->procedure_name));
+    auto reg = machine_desc_object.get_new_register<int_reg>();
+    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(this->return_value_reg), new Register_Addr_Opd(reg)));
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
 Code_For_Ast & Call_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
@@ -534,11 +549,13 @@ Code_For_Ast & Return_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
     auto return_value_code = this->return_value->compile();
     icode_stmt_list.splice(icode_stmt_list.end(), return_value_code.get_icode_list());
-    auto reg = machine_desc_object.get_new_register<int_reg>();
-    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(reg)));
+
+    auto v1_reg = machine_desc_object.spim_register_table[v1]; v1_reg->set_register_occupied();
+    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(v1_reg)));
     return_value_code.get_reg()->reset_register_occupied();
-    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, ""));
-    return *(new Code_For_Ast(icode_stmt_list, reg));
+
+    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, "epilogue_" + this->proc_name));
+    return *(new Code_For_Ast(icode_stmt_list, v1_reg));
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}

@@ -74,7 +74,7 @@ void Mem_Addr_Opd::print_asm_opd(ostream & file_buffer) {
     if (scope == global) {
         file_buffer << this->symbol_entry->get_variable_name();
     }
-    else if (scope == local) {
+    else if (scope == formal || scope == local) {
         file_buffer << this->symbol_entry->get_start_offset();
         file_buffer << "($" << this->symbol_entry->get_register()->get_name() << ")";
     }
@@ -439,6 +439,9 @@ void Label_IC_Stmt::print_icode(ostream & file_buffer) {
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << "goto " << this->label;
     }
+    else if (op_type == jal) {
+        file_buffer << ICODE_ALIGN_SPACE << "call " << this->label;
+    }
     else if (op_type == ret_inst) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name();
     }
@@ -453,8 +456,11 @@ void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
     }
+    else if (op_type == jal) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
+    }
     else if (op_type == ret_inst) {
-        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
+        file_buffer << ICODE_ALIGN_SPACE << "j " << this->label;
     }
     else {
         file_buffer << endl << this->label << ":";
