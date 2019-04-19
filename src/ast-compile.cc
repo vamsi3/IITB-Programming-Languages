@@ -5,11 +5,13 @@ template class Number_Ast<int>;
 
 bool rel_op_switch;
 
+
 // ============ Ast ============================================================
 
 Code_For_Ast & Ast::create_store_stmt(Register_Descriptor * store_register) {
 
 }
+
 
 // ============ Assignment_Ast =================================================
 
@@ -27,6 +29,7 @@ Code_For_Ast & Assignment_Ast::compile() {
 Code_For_Ast & Assignment_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
+
 
 // ============ Name_Ast =======================================================
 
@@ -69,6 +72,7 @@ Code_For_Ast & Name_Ast::create_store_stmt(Register_Descriptor * store_register)
     return *code;
 }
 
+
 // ============ Number_Ast =====================================================
 
 template <class T>
@@ -94,6 +98,7 @@ template <class T>
 Code_For_Ast & Number_Ast<T>::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
+
 
 // ============ Plus_Ast =======================================================
 
@@ -127,6 +132,7 @@ Code_For_Ast & Plus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
 
+
 // ============ Minus_Ast ======================================================
 
 Code_For_Ast & Minus_Ast::compile() {
@@ -158,6 +164,7 @@ Code_For_Ast & Minus_Ast::compile() {
 Code_For_Ast & Minus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
+
 
 // ============ Divide_Ast =====================================================
 
@@ -191,6 +198,7 @@ Code_For_Ast & Divide_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
 
+
 // ============ Mult_Ast =======================================================
 
 Code_For_Ast & Mult_Ast::compile() {
@@ -223,6 +231,7 @@ Code_For_Ast & Mult_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
 
+
 // ============ UMinus_Ast =====================================================
 
 Code_For_Ast & UMinus_Ast::compile() {
@@ -252,6 +261,7 @@ Code_For_Ast & UMinus_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
 
 }
 
+
 // ============ Conditional_Expression_Ast =====================================
 
 Code_For_Ast & Conditional_Expression_Ast::compile() {
@@ -277,7 +287,7 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     Tgt_Op branch_op;
     if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1t : bc1f;
     else branch_op = beq;
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), new Register_Addr_Opd(zero_reg), else_label));
 
     icode_stmt_list.splice(icode_stmt_list.end(), lhs_code.get_icode_list());
 
@@ -302,16 +312,42 @@ Code_For_Ast & Conditional_Expression_Ast::compile() {
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
-// ============ Return_Ast =====================================================
 
-Code_For_Ast & Return_Ast::compile() {
-    // This should not be called as of Assignment 5!
-    return *(new Code_For_Ast());
+// ============ Print_Ast ======================================================
+
+Code_For_Ast & Print_Ast::compile() {
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    auto type = this->var->get_data_type();
+    auto v0_reg = machine_desc_object.spim_register_table[v0];
+
+    if (type == int_data_type) {
+        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(v0_reg)));
+    }
+    else if (type == double_data_type) {
+        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(3), new Register_Addr_Opd(v0_reg)));
+    }
+
+    auto var_code = this->var->compile();
+    auto arg_load_stmt = var_code.get_icode_list().back();
+    
+    Register_Descriptor * print_reg;
+    if (type == int_data_type) {
+        print_reg = machine_desc_object.spim_register_table[a0];
+    }
+    else if (type == double_data_type) {
+        print_reg = machine_desc_object.spim_register_table[f12];
+    }
+    arg_load_stmt->set_result(new Register_Addr_Opd(print_reg));
+    var_code.get_reg()->reset_register_occupied();
+    icode_stmt_list.push_back(arg_load_stmt);
+    
+    icode_stmt_list.push_back(new Print_IC_Stmt());
+
+    print_reg->reset_register_occupied();
+    v0_reg->reset_register_occupied();
+    return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
 
-Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {
-
-}
 
 // ============ Relational_Expr_Ast ============================================
 
@@ -343,6 +379,7 @@ Code_For_Ast & Relational_Expr_Ast::compile() {
 
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
+
 
 // ============ Logical_Expr_Ast ===============================================
 
@@ -381,6 +418,7 @@ Code_For_Ast & Logical_Expr_Ast::compile() {
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
+
 // ============ Selection_Statement_Ast ========================================
 
 Code_For_Ast & Selection_Statement_Ast::compile() {
@@ -394,7 +432,9 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
     Tgt_Op branch_op;
     if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1t : bc1f;
     else branch_op = beq;
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), else_label));
+    auto zero_reg = machine_desc_object.spim_register_table[zero];
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), new Register_Addr_Opd(zero_reg), else_label));
+    zero_reg->reset_register_occupied();
     cond_code.get_reg()->reset_register_occupied();
 
     auto then_code = this->then_part->compile();
@@ -415,9 +455,10 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
         else_code.get_reg()->reset_register_occupied();
         icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
     }
-
+    
     return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
+
 
 // ============ Iteration_Statement_Ast ========================================
 
@@ -444,12 +485,15 @@ Code_For_Ast & Iteration_Statement_Ast::compile() {
     Tgt_Op branch_op;
     if (cond_code.get_reg()->get_register() == none) branch_op = (rel_op_switch)? bc1f : bc1t;
     else branch_op = bne;
-    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), body_label));
+    auto zero_reg = machine_desc_object.spim_register_table[zero];
+    icode_stmt_list.push_back(new Control_Flow_IC_Stmt(branch_op, new Register_Addr_Opd(cond_code.get_reg()), new Register_Addr_Opd(zero_reg), body_label));
 
+    zero_reg->reset_register_occupied();
     cond_code.get_reg()->reset_register_occupied();
 
     return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
+
 
 // ============ Sequence_Ast ===================================================
 
@@ -474,37 +518,20 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
     }
 }
 
-// ============ Print_Ast ======================================================
 
-Code_For_Ast & Print_Ast::compile() {
-    auto icode_stmt_list = list<Icode_Stmt *>();
-    auto type = this->var->get_data_type();
-    auto v0_reg = machine_desc_object.spim_register_table[v0];
+// ============ Call_Ast =======================================================
 
-    if (type == int_data_type) {
-        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(1), new Register_Addr_Opd(v0_reg)));
-    }
-    else if (type == double_data_type) {
-        icode_stmt_list.push_back(new Move_IC_Stmt(imm_load, new Const_Opd<int>(3), new Register_Addr_Opd(v0_reg)));
-    }
-
-    auto var_code = this->var->compile();
-    auto arg_load_stmt = var_code.get_icode_list().back();
-    
-    Register_Descriptor * print_reg;
-    if (type == int_data_type) {
-        print_reg = machine_desc_object.spim_register_table[a0];
-    }
-    else if (type == double_data_type) {
-        print_reg = machine_desc_object.spim_register_table[f12];
-    }
-    arg_load_stmt->set_result(new Register_Addr_Opd(print_reg));
-    var_code.get_reg()->reset_register_occupied();
-    icode_stmt_list.push_back(arg_load_stmt);
-    
-    icode_stmt_list.push_back(new Print_IC_Stmt());
-
-    print_reg->reset_register_occupied();
-    v0_reg->reset_register_occupied();
-    return *(new Code_For_Ast(icode_stmt_list, NULL));
+Code_For_Ast & Call_Ast::compile() {
+    return *(new Code_For_Ast());
 }
+
+Code_For_Ast & Call_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
+
+
+// ============ Return_Ast =====================================================
+
+Code_For_Ast & Return_Ast::compile() {
+    return *(new Code_For_Ast());
+}
+
+Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}

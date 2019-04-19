@@ -194,10 +194,6 @@ Eval_Result & Conditional_Expression_Ast::evaluate(Local_Environment & eval_env,
     return (cond_value == 1)? this->lhs->evaluate(eval_env, file_buffer): this->rhs->evaluate(eval_env, file_buffer);
 }
 
-Eval_Result & Return_Ast::evaluate(Local_Environment & eval_env, ostream & file_buffer) {
-    // empty
-}
-
 Eval_Result & Relational_Expr_Ast::evaluate(Local_Environment & eval_env, ostream & file_buffer) {
     auto result = new Eval_Result_Value_Int;
     result->set_value(0);
@@ -277,4 +273,12 @@ Eval_Result & Sequence_Ast::evaluate(Local_Environment & eval_env, ostream & fil
     for (const auto &statement: this->statement_list) {
         statement->evaluate(eval_env, file_buffer);
     }
+}
+
+Eval_Result & Call_Ast::evaluate(Local_Environment & eval_env, ostream & file_buffer) {
+    // empty
+}
+
+Eval_Result & Return_Ast::evaluate(Local_Environment & eval_env, ostream & file_buffer) {
+    // empty
 }

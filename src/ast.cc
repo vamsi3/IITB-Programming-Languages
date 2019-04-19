@@ -106,7 +106,6 @@ void Name_Ast::print(ostream & file_buffer) {
 }
 
 
-
 // =================== Number_Ast ==============================================
 
 template <class T>
@@ -265,11 +264,15 @@ void Conditional_Expression_Ast::print(ostream & file_buffer) {
 }
 
 
-// =================== Return_Ast ==============================================
+// =================== Print_Ast ===============================================
 
-void Return_Ast::print(ostream & file_buffer) {
-    string return_data_types[] = {"void", "int", "float"};
-    file_buffer << "Return Type: " << return_data_types[this->node_data_type];
+Print_Ast::Print_Ast(Ast *v, int line) {
+    this->var = v;
+}
+
+void Print_Ast::print(ostream & file_buffer) {
+    file_buffer << endl << AST_SPACE << "Print :";
+    file_buffer << endl << AST_SUB_NODE_SPACE << "("; this->var->print(file_buffer); file_buffer << ")";
 }
 
 
@@ -342,7 +345,6 @@ void Logical_Expr_Ast::print(ostream & file_buffer) {
 
 // =================== Selection_Statement_Ast =================================
 
-
 Selection_Statement_Ast::Selection_Statement_Ast(Ast * cond,Ast* then_part, Ast* else_part, int line) {
     this->cond = cond;
     this->then_part = then_part;
@@ -372,6 +374,7 @@ void Selection_Statement_Ast::print(ostream & file_buffer) {
         file_buffer << endl << AST_SPACE << "ELSE ("; this->else_part->print(file_buffer); file_buffer << ")";
     }
 }
+
 
 // =================== Iteration_Statement_Ast =================================
 
@@ -408,6 +411,7 @@ void Iteration_Statement_Ast::print(ostream & file_buffer) {
     }
 }
 
+
 // =================== Sequence_Ast ============================================
 
 Sequence_Ast::Sequence_Ast(int line) {
@@ -427,13 +431,40 @@ void Sequence_Ast::print(ostream & file_buffer) {
     }
 }
 
-// =================== Print_Ast ===============================================
 
-Print_Ast::Print_Ast(Ast *v, int line) {
-    this->var = v;
+// =================== Call_Ast ================================================
+
+Call_Ast::Call_Ast(string name, int line) {
+    this->procedure_name = name;
+    this->lineno = line;
+    this->ast_num_child = zero_arity;
+    this->node_data_type = void_data_type;
 }
 
-void Print_Ast::print(ostream & file_buffer) {
-    file_buffer << endl << AST_SPACE << "Print :";
-    file_buffer << endl << AST_SUB_NODE_SPACE << "("; this->var->print(file_buffer); file_buffer << ")";
+Data_Type Call_Ast::get_data_type() {
+    return this->node_data_type;
+}
+
+void Call_Ast::set_register(Register_Descriptor * reg) {
+    this->return_value_reg = reg;
+}
+
+void Call_Ast::check_actual_formal_param(Symbol_Table & formal_param_list) {
+    
+}
+
+void Call_Ast::set_actual_param_list(list<Ast *> & param_list) {
+    this->actual_param_list = param_list;
+}
+
+void Call_Ast::print(ostream & file_buffer) {
+    file_buffer << "[Call_Ast][print]" << endl;
+}
+
+
+// =================== Return_Ast ==============================================
+
+void Return_Ast::print(ostream & file_buffer) {
+    string return_data_types[] = {"void", "int", "float"};
+    file_buffer << "Return Type: " << return_data_types[this->node_data_type];
 }

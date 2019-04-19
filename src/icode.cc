@@ -329,20 +329,19 @@ void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
 
 // ============ Control_Flow_IC_Stmt ===========================================
 
-Control_Flow_IC_Stmt::Control_Flow_IC_Stmt(Tgt_Op op, Ics_Opd * o1, Ics_Opd * o2, string label, int size = 0) {
+Control_Flow_IC_Stmt::Control_Flow_IC_Stmt(Tgt_Op op, Ics_Opd * o1, Ics_Opd * o2, string label, int size) {
     this->op_desc = *machine_desc_object.spim_instruction_table[op];
     this->opd1 = o1;
     this->opd2 = o2;
-    this->label = label;
+    this->offset = label;
     this->actual_param_size = size;
-    // TODO: this->offset = ?
 }
 
 Control_Flow_IC_Stmt & Control_Flow_IC_Stmt::operator=(const Control_Flow_IC_Stmt & rhs) {
     if (this != &rhs) {
         this->op_desc = rhs.op_desc;
         *this->opd1 = *rhs.opd1;
-        this->label = rhs.label;
+        this->offset = rhs.offset;
     }
     return *this;
 }
@@ -367,19 +366,19 @@ void Control_Flow_IC_Stmt::set_opd2(Ics_Opd * io) {
     this->opd2 = io;
 }
 
-string Control_Flow_IC_Stmt::get_label() {
-    return this->label;
+string Control_Flow_IC_Stmt::get_Offset() {
+    return this->offset;
 }
 
-void Control_Flow_IC_Stmt::set_label(string label) {
-    this->label = label;
+void Control_Flow_IC_Stmt::set_Offset(string label) {
+    this->offset = label;
 }
 
 void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
     auto ic_format = this->get_inst_op_of_ics().get_ic_format();
     if (ic_format == i_op_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-        file_buffer << " " << this->label;
+        file_buffer << " " << this->offset;
         file_buffer << endl;
     }
     else if (ic_format == i_op_o1_o2_st) {
@@ -388,7 +387,7 @@ void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
         file_buffer << " , ";
         file_buffer << "zero";
         file_buffer << " : ";
-        file_buffer << "goto " << this->label;
+        file_buffer << "goto " << this->offset;
         file_buffer << endl;
     }
 }
@@ -400,12 +399,12 @@ void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
         file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
         file_buffer << ", ";
         file_buffer << "$zero";
-        file_buffer << ", " << this->label;
+        file_buffer << ", " << this->offset;
         file_buffer << endl;
     }
     else if (asm_format == a_op_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
-        file_buffer << " " << this->label;
+        file_buffer << " " << this->offset;
         file_buffer << endl;
     }
 }
