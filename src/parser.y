@@ -9,7 +9,8 @@
 	extern int yylex(void);
 
 	Symbol_Table* local_symbol_table;
-	Table_Scope current_scope = global;
+	Symbol_Table* formal_symbol_table;
+	string proc_name;
 	bool ast_error = false;
 %}
 
@@ -20,6 +21,7 @@
 
 	list<Ast *> * ast_list;
 	Ast * ast;
+	Call_Ast * call_ast;
 	Symbol_Table * symbol_table;
 	Symbol_Table_Entry * symbol_entry;
 	Basic_Block * basic_block;
@@ -45,9 +47,9 @@
 %token  				NOT_EQUAL
 %token  				OR
 %token					PRINT
-%token					RETURN
 %token  				VOID
 %token  				WHILE
+%token					RETURN
 
 %nonassoc "then" 
 %nonassoc ELSE
@@ -63,10 +65,15 @@
 
 
 
-%type	<ast_list>		statement_list optional_statement_list
-%type	<ast>			variable constant expression conditional_statement assignment_statement sequence while_statement do_while_statement if_statement if_else_statement statement_list_basic1 statement_list_basic print_statement
-%type	<symbol_table>	integer_variable_list float_variable_list declaration variable_declaration variable_declaration_list optional_variable_declaration_list
-%type	<procedure>		procedure
+%type	<ast_list>		statement_list optional_statement_list call_param_list optional_call_param_list
+%type	<ast>			variable constant expression conditional_statement assignment_statement return_statement
+%type   <ast> 			sequence while_statement do_while_statement if_statement if_else_statement
+%type 	<ast> 			statement_list_basic print_statement statement_list_basic1
+%type   <call_ast>		function_call
+%type	<symbol_table>	integer_variable_list float_variable_list declaration variable_declaration 
+%type 	<symbol_table> 	optional_variable_declaration_list optional_variable_function_declaration_list
+%type 	<symbol_table>	optional_fun_param_list fun_param_list fun_param_declaration
+%type	<procedure>		function_signature
 
 %start program
 
@@ -74,49 +81,120 @@
 %%
 
 program:
-	optional_variable_declaration_list {
-		program_object.set_global_table( *$1);
-		current_scope = local;
+	optional_variable_function_declaration_list
+	procedure_definition_list
+;
+
+procedure_definition_list:
+	procedure_definition
+|	procedure_definition_list procedure_definition
+;
+
+procedure_definition:
+	function_signature
+	'{' optional_variable_declaration_list
+		optional_statement_list '}' {
+			local_symbol_table = $3;
+			$1->set_local_list( *$3);
+			$1->set_ast_list( *$4);
+			program_object.set_proc_to_map(proc_name, $1);
+		}
+;
+
+
+function_signature:
+	VOID NAME '(' optional_fun_param_list ')'  {  
+			formal_symbol_table = $4;
+			$$ = new Procedure(void_data_type, *$2, yylineno);
+			$$->set_formal_param_list( *$4);
+			proc_name = *$2;
+		}
+|	INTEGER NAME '(' optional_fun_param_list ')'  {  
+			formal_symbol_table = $4;
+			$$ = new Procedure(int_data_type, *$2, yylineno);
+			$$->set_formal_param_list( *$4);
+			proc_name = *$2;
+		}
+|	FLOAT NAME '(' optional_fun_param_list ')'  {  
+			formal_symbol_table = $4;
+			$$ = new Procedure(double_data_type, *$2, yylineno);
+			$$->set_formal_param_list( *$4);
+			proc_name = *$2;
+		}
+;
+
+optional_fun_param_list:
+	/* empty */ {
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
 	}
-	procedure {
-		program_object.set_procedure($3, yylineno);
-		current_scope = global;
+|	fun_param_list {
+		$$ = $1;
 	}
 ;
 
 
-procedure:
-	VOID NAME '(' ')' '{' optional_variable_declaration_list {
-		local_symbol_table = $6;
-	}
-	optional_statement_list '}' {
-		if (ast_error) exit(1);
-		$$ = new Procedure(void_data_type, *$2, yylineno);
-		$$->set_local_list( *$6);
-		$$->set_ast_list( *$8);
+fun_param_list:
+	fun_param_declaration { $$ = $1; }
+|	fun_param_declaration ',' fun_param_list {
+		$$ = $3;
+		$$->append_list( *$1, yylineno);
 	}
 ;
 
+fun_param_declaration:
+	INTEGER NAME {
+		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, int_data_type, yylineno);
+		variable->set_symbol_scope(formal);
+		
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
+		$$->push_symbol(variable);
+	}
+|	FLOAT NAME {
+		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, double_data_type, yylineno);
+		variable->set_symbol_scope(formal);
+		
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
+		$$->push_symbol(variable);
+	}
+;
 
 /* Declarations */
+
+optional_variable_function_declaration_list:
+	/* empty */ {
+		$$ = new Symbol_Table();
+		$$->set_table_scope(global);
+		program_object.set_global_table( *$$);
+	}
+|	optional_variable_function_declaration_list variable_declaration {
+		$$ = $1;
+		$$->append_list( *$2, yylineno);
+		program_object.set_global_table( *$$);
+	}
+|	optional_variable_function_declaration_list function_declaration {
+		$$ = $1;
+	}
+;
+
+function_declaration:
+	function_signature ';'
+;
+
 
 optional_variable_declaration_list:
 	/* empty */ {
 		$$ = new Symbol_Table();
-		$$->set_table_scope(current_scope);
+		$$->set_table_scope(local);
 	}
-|	variable_declaration_list {
-		$$ = $1;
-	}
-;
-
-variable_declaration_list:
-	variable_declaration { $$ = $1; }
-|	variable_declaration_list variable_declaration {
+|	optional_variable_declaration_list variable_declaration {
 		$$ = $1;
 		$$->append_list( *$2, yylineno);
 	}
 ;
+
 
 variable_declaration:
 	declaration ';' { $$ = $1; }
@@ -131,20 +209,20 @@ integer_variable_list:
 	NAME {
 		$1->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$1, int_data_type, yylineno);
-		variable->set_symbol_scope(current_scope);
+		variable->set_symbol_scope(local);
 		
 		$$ = new Symbol_Table();
-		$$->set_table_scope(current_scope);
+		$$->set_table_scope(local);
 		$$->push_symbol(variable);
 	}
 |	integer_variable_list ',' NAME {
 		$3->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$3, int_data_type, yylineno);
-		variable->set_symbol_scope(current_scope);
+		variable->set_symbol_scope(local);
 
 		$$ = $1;
 		Symbol_Table* temp_table = new Symbol_Table();
-		temp_table->set_table_scope(current_scope);
+		temp_table->set_table_scope(local);
 		temp_table->push_symbol(variable);
 		$$->append_list( *temp_table, yylineno);
 	}
@@ -154,20 +232,20 @@ float_variable_list:
 	NAME {
 		$1->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$1, double_data_type, yylineno);
-		variable->set_symbol_scope(current_scope);
+		variable->set_symbol_scope(local);
 		
 		$$ = new Symbol_Table();
-		$$->set_table_scope(current_scope);
+		$$->set_table_scope(local);
 		$$->push_symbol(variable);
 	}
 |	float_variable_list ',' NAME {
 		$3->push_back('_');
 		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$3, double_data_type, yylineno);
-		variable->set_symbol_scope(current_scope);
+		variable->set_symbol_scope(local);
 
 		$$ = $1;
 		Symbol_Table* temp_table = new Symbol_Table();
-		temp_table->set_table_scope(current_scope);
+		temp_table->set_table_scope(local);
 		temp_table->push_symbol(variable);
 		$$->append_list( *temp_table, yylineno);
 	}
@@ -191,6 +269,7 @@ statement_list_basic1:
 |	if_statement { $$=$1; }
 |	if_else_statement { $$=$1; }
 |	print_statement { $$=$1; }
+|  	return_statement { $$=$1; }
 ;
 
 statement_list:
@@ -204,10 +283,46 @@ statement_list:
 	}
 ;
 
+return_statement:
+	RETURN ';' {$$ = new Return_Ast(NULL,proc_name,yylineno);}
+|	RETURN expression ';' {$$ = new Return_Ast($2,proc_name,yylineno);}
+;
+
 assignment_statement:
 	variable ASSIGN expression ';' {
 		$$ = new Assignment_Ast($1, $3, yylineno);
 		if (!$$->check_ast()) ast_error = true;
+	}
+|	variable ASSIGN function_call ';' {
+		$$ = new Assignment_Ast($1, $3, yylineno);
+		if (!$$->check_ast()) ast_error = true;
+	}
+;
+
+	/* change the ast_error below */
+function_call:
+	NAME '(' optional_call_param_list ')' {
+		if(!program_object.is_procedure_exists( *$1)) {
+			yyerror("no function exists");
+			exit(1);
+		}
+		$$ = new Call_Ast( *$1, yylineno);
+		$$->set_actual_param_list( *$3);
+	}
+;
+
+optional_call_param_list:
+	/* empty */ {$$ = new list<Ast *>();}
+|	call_param_list { $$ = $1;}
+
+call_param_list:
+	expression {
+		$$ = new list<Ast *>();
+		$$->push_back($1);
+	}
+|	call_param_list ',' expression {
+		$$ = $1;
+		$$->push_back($3);
 	}
 ;
 
