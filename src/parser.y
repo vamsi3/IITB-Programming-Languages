@@ -82,7 +82,12 @@
 
 program:
 	optional_variable_function_declaration_list
-	procedure_definition_list
+	procedure_definition_list {
+		if(!program_object.is_procedure_exists("main")) {
+			yyerror("main not defined");
+			exit(1);
+		}
+	}
 ;
 
 procedure_definition_list:
@@ -92,11 +97,12 @@ procedure_definition_list:
 
 procedure_definition:
 	function_signature
-	'{' optional_variable_declaration_list
-		optional_statement_list '}' {
+	'{' optional_variable_declaration_list {
 			local_symbol_table = $3;
 			$1->set_local_list( *$3);
-			$1->set_ast_list( *$4);
+		}
+		optional_statement_list '}' {
+			$1->set_ast_list( *$5);
 			program_object.set_proc_to_map(proc_name, $1);
 		}
 ;
