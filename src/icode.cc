@@ -329,10 +329,13 @@ void Compute_IC_Stmt::print_assembly(ostream & file_buffer) {
 
 // ============ Control_Flow_IC_Stmt ===========================================
 
-Control_Flow_IC_Stmt::Control_Flow_IC_Stmt(Tgt_Op inst_op, Ics_Opd * opd1, string label) {
-    this->op_desc = *machine_desc_object.spim_instruction_table[inst_op];
-    this->opd1 = opd1;
+Control_Flow_IC_Stmt::Control_Flow_IC_Stmt(Tgt_Op op, Ics_Opd * o1, Ics_Opd * o2, string label, int size = 0) {
+    this->op_desc = *machine_desc_object.spim_instruction_table[op];
+    this->opd1 = o1;
+    this->opd2 = o2;
     this->label = label;
+    this->actual_param_size = size;
+    // TODO: this->offset = ?
 }
 
 Control_Flow_IC_Stmt & Control_Flow_IC_Stmt::operator=(const Control_Flow_IC_Stmt & rhs) {
@@ -354,6 +357,14 @@ Ics_Opd * Control_Flow_IC_Stmt::get_opd1() {
 
 void Control_Flow_IC_Stmt::set_opd1(Ics_Opd * io) {
     this->opd1 = io;
+}
+
+Ics_Opd * Control_Flow_IC_Stmt::get_opd2() {
+    return this->opd2;
+}
+
+void Control_Flow_IC_Stmt::set_opd2(Ics_Opd * io) {
+    this->opd2 = io;
 }
 
 string Control_Flow_IC_Stmt::get_label() {
@@ -472,6 +483,10 @@ void Code_For_Ast::append_ics(Icode_Stmt & ics) {
 
 list<Icode_Stmt *> & Code_For_Ast::get_icode_list() {
     return this->ics_list;
+}
+
+void Code_For_Ast::set_icode_list(list<Icode_Stmt *> * ic_list_new) {
+    this->ics_list = *ic_list_new;
 }
 
 Register_Descriptor * Code_For_Ast::get_reg() {
