@@ -366,6 +366,9 @@ variable:
 		else if (program_object.variable_in_symbol_list_check( *$1)) {
 			$$ = new Name_Ast( *$1, program_object.get_symbol_table_entry( *$1), yylineno);
 		}
+		else if (formal_symbol_table->variable_in_symbol_list_check( *$1)) {
+			$$ = new Name_Ast( *$1, formal_symbol_table->get_symbol_table_entry( *$1), yylineno);	
+		}
 		else {
 			yyerror("Variable has not been declared");
 			exit(1);
