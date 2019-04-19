@@ -19,6 +19,7 @@ delimiter                       [,;?:{}()]
 "float"                         { store_token_name("FLOAT", yytext, yylineno); return FLOAT; }
 "int"                           { store_token_name("INTEGER", yytext, yylineno); return INTEGER; }
 "print"                         { store_token_name("PRINT", yytext, yylineno); return PRINT; }
+"return"                        { store_token_name("RETURN", yytext, yylineno); return RETURN; }
 "void"                          { store_token_name("VOID", yytext, yylineno); return VOID; }
 "while"                         { store_token_name("WHILE", yytext, yylineno); return WHILE; }
 
@@ -35,8 +36,6 @@ delimiter                       [,;?:{}()]
 "="                             { store_token_name("ASSIGN_OP", yytext, yylineno); return ASSIGN; }
 {operator}                      { store_token_name("ARITHOP", yytext, yylineno); return (int) yytext[0]; }
 {delimiter}                     { store_token_name("META CHAR", yytext, yylineno); return (int) yytext[0]; }
-
-    /* "return"                 { store_token_name("RETURN", yytext, yylineno); return RETURN; } */
 
 {letter}({letter}|{digit})*     { store_token_name("NAME", yytext, yylineno); yylval.string_value = new std::string(yytext); return NAME; }
 {digit}+\.{digit}*              { store_token_name("FNUM", yytext, yylineno); yylval.double_value = atof(yytext); return DOUBLE_NUMBER; }

@@ -45,6 +45,7 @@
 %token  				NOT_EQUAL
 %token  				OR
 %token					PRINT
+%token					RETURN
 %token  				VOID
 %token  				WHILE
 

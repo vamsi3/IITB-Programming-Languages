@@ -383,9 +383,7 @@ void Control_Flow_IC_Stmt::print_icode(ostream & file_buffer) {
     }
     else if (ic_format == i_op_o1_o2_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name() << ":" << ICODE_SPACE;
-        this->opd1->print_ics_opd(file_buffer);
-        file_buffer << " , ";
-        file_buffer << "zero";
+        this->opd1->print_ics_opd(file_buffer); file_buffer << " , "; this->opd2->print_ics_opd(file_buffer);
         file_buffer << " : ";
         file_buffer << "goto " << this->offset;
         file_buffer << endl;
@@ -397,8 +395,7 @@ void Control_Flow_IC_Stmt::print_assembly(ostream & file_buffer) {
     if (asm_format == a_op_o1_o2_st) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
         file_buffer << " "; this->opd1->print_asm_opd(file_buffer);
-        file_buffer << ", ";
-        file_buffer << "$zero";
+        file_buffer << ", "; this->opd2->print_asm_opd(file_buffer);
         file_buffer << ", " << this->offset;
         file_buffer << endl;
     }
@@ -442,6 +439,9 @@ void Label_IC_Stmt::print_icode(ostream & file_buffer) {
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << "goto " << this->label;
     }
+    else if (op_type == ret_inst) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_name();
+    }
     else {
         file_buffer << endl << this->label << ":";
     }
@@ -452,6 +452,9 @@ void Label_IC_Stmt::print_assembly(ostream & file_buffer) {
     auto op_type = this->op_desc.get_op();
     if (op_type == j) {
         file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic() << " " << this->label;
+    }
+    else if (op_type == ret_inst) {
+        file_buffer << ICODE_ALIGN_SPACE << this->op_desc.get_mnemonic();
     }
     else {
         file_buffer << endl << this->label << ":";

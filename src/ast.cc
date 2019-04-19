@@ -450,7 +450,7 @@ void Call_Ast::set_register(Register_Descriptor * reg) {
 }
 
 void Call_Ast::check_actual_formal_param(Symbol_Table & formal_param_list) {
-    
+
 }
 
 void Call_Ast::set_actual_param_list(list<Ast *> & param_list) {
@@ -458,13 +458,29 @@ void Call_Ast::set_actual_param_list(list<Ast *> & param_list) {
 }
 
 void Call_Ast::print(ostream & file_buffer) {
-    file_buffer << "[Call_Ast][print]" << endl;
+    file_buffer << endl << AST_SPACE << "FN CALL: " << this->procedure_name;
+    file_buffer << "(";
+    for (const auto &ast: this->actual_param_list) {
+        ast->print(file_buffer);
+    }
+    file_buffer << ")";
 }
 
 
 // =================== Return_Ast ==============================================
 
+Return_Ast::Return_Ast(Ast * ret_val, string name, int line) {
+    this->return_value = ret_val;
+    this->proc_name = name;
+    this->lineno = line;
+    this->ast_num_child = unary_arity;
+    this->node_data_type = this->return_value->get_data_type();
+}
+
+Data_Type Return_Ast::get_data_type() {
+    return this->node_data_type;
+}
+
 void Return_Ast::print(ostream & file_buffer) {
-    string return_data_types[] = {"void", "int", "float"};
-    file_buffer << "Return Type: " << return_data_types[this->node_data_type];
+    file_buffer << endl << AST_SPACE << "RETURN "; this->return_value->print(file_buffer);
 }

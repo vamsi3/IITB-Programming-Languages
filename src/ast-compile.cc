@@ -455,7 +455,7 @@ Code_For_Ast & Selection_Statement_Ast::compile() {
         else_code.get_reg()->reset_register_occupied();
         icode_stmt_list.push_back(new Label_IC_Stmt(label, if_label));
     }
-    
+
     return *(new Code_For_Ast(icode_stmt_list, NULL));
 }
 
@@ -522,7 +522,7 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
 // ============ Call_Ast =======================================================
 
 Code_For_Ast & Call_Ast::compile() {
-    return *(new Code_For_Ast());
+    
 }
 
 Code_For_Ast & Call_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
@@ -531,7 +531,14 @@ Code_For_Ast & Call_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
 // ============ Return_Ast =====================================================
 
 Code_For_Ast & Return_Ast::compile() {
-    return *(new Code_For_Ast());
+    auto icode_stmt_list = list<Icode_Stmt *>();
+    auto return_value_code = this->return_value->compile();
+    icode_stmt_list.splice(icode_stmt_list.end(), return_value_code.get_icode_list());
+    auto reg = machine_desc_object.get_new_register<int_reg>();
+    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(reg)));
+    return_value_code.get_reg()->reset_register_occupied();
+    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, ""));
+    return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
