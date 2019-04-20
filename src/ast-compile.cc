@@ -564,6 +564,11 @@ Code_For_Ast & Call_Ast::compile() {
     icode_stmt_list.push_back(new Compute_IC_Stmt(add, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(-offset), new Register_Addr_Opd(reg_sp)));
 
     auto type = this->get_data_type();
+
+    if (type == void_data_type) {
+        return *(new Code_For_Ast(icode_stmt_list, NULL));
+    }
+
     Tgt_Op mov_op;
     Register_Descriptor * reg;
     if (type == int_data_type) {
