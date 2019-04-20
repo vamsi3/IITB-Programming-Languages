@@ -24,6 +24,7 @@
 	Call_Ast * call_ast;
 	Symbol_Table * symbol_table;
 	Symbol_Table_Entry * symbol_entry;
+	list<Symbol_Table_Entry *> * symbol_list;
 	Basic_Block * basic_block;
 	Procedure * procedure;
 }
@@ -72,7 +73,9 @@
 %type   <call_ast>		function_call
 %type	<symbol_table>	integer_variable_list float_variable_list declaration variable_declaration 
 %type 	<symbol_table> 	optional_variable_declaration_list optional_variable_function_declaration_list
-%type 	<symbol_table>	optional_fun_param_list fun_param_list fun_param_declaration
+%type 	<symbol_table>	optional_fun_param_list
+%type   <symbol_entry>	fun_param_declaration
+%type   <symbol_list>	fun_param_list
 %type	<procedure>		function_signature
 
 %start program
@@ -104,7 +107,6 @@ procedure_definition:
 		optional_statement_list '}' {
 			$1->set_ast_list( *$5);
 			$1->set_proc_is_defined();
-			program_object.set_proc_to_map(proc_name, $1);
 		}
 ;
 
@@ -118,6 +120,7 @@ function_signature:
 			$$ = new Procedure(void_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
 			proc_name = *$2;
+			program_object.set_proc_to_map(proc_name, $$);
 		}
 |	INTEGER NAME '(' optional_fun_param_list ')' {
 			if ( *$2 != "main") {
@@ -127,6 +130,7 @@ function_signature:
 			$$ = new Procedure(int_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
 			proc_name = *$2;
+			program_object.set_proc_to_map(proc_name, $$);
 		}
 |	FLOAT NAME '(' optional_fun_param_list ')' {
 			if ( *$2 != "main") {
@@ -136,6 +140,7 @@ function_signature:
 			$$ = new Procedure(double_data_type, *$2, yylineno);
 			$$->set_formal_param_list( *$4);
 			proc_name = *$2;
+			program_object.set_proc_to_map(proc_name, $$);
 		}
 ;
 
@@ -145,37 +150,33 @@ optional_fun_param_list:
 		$$->set_table_scope(formal);
 	}
 |	fun_param_list {
-		$$ = $1;
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
+		for (auto &entry: *$1) {
+			$$->push_symbol(entry);
+		}
 	}
 ;
 
 
 fun_param_list:
-	fun_param_declaration { $$ = $1; }
+	fun_param_declaration { $$ = new list<Symbol_Table_Entry *>; $$->push_back($1); }
 |	fun_param_declaration ',' fun_param_list {
 		$$ = $3;
-		$$->append_list( *$1, yylineno);
+		$$->push_back($1);
 	}
 ;
 
 fun_param_declaration:
 	INTEGER NAME {
 		$2->push_back('_');
-		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, int_data_type, yylineno);
-		variable->set_symbol_scope(formal);
-		
-		$$ = new Symbol_Table();
-		$$->set_table_scope(formal);
-		$$->push_symbol(variable);
+		$$ = new Symbol_Table_Entry( *$2, int_data_type, yylineno);
+		$$->set_symbol_scope(formal);
 	}
 |	FLOAT NAME {
 		$2->push_back('_');
-		Symbol_Table_Entry* variable = new Symbol_Table_Entry( *$2, double_data_type, yylineno);
-		variable->set_symbol_scope(formal);
-		
-		$$ = new Symbol_Table();
-		$$->set_table_scope(formal);
-		$$->push_symbol(variable);
+		$$ = new Symbol_Table_Entry( *$2, double_data_type, yylineno);
+		$$->set_symbol_scope(formal);
 	}
 ;
 
@@ -327,6 +328,7 @@ function_call:
 		}
 		$$ = new Call_Ast( *$1, yylineno);
 		$$->set_actual_param_list( *$3);
+	    $$->check_actual_formal_param(program_object.get_procedure_prototype( *$1)->get_formal_param_list());
 	}
 ;
 

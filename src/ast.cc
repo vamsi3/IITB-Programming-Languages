@@ -438,7 +438,8 @@ Call_Ast::Call_Ast(string name, int line) {
     this->procedure_name = name;
     this->lineno = line;
     this->ast_num_child = zero_arity;
-    this->node_data_type = program_object.get_procedure_prototype(this->procedure_name)->get_return_type();
+    auto procedure_prototype = program_object.get_procedure_prototype(this->procedure_name);
+    this->node_data_type = procedure_prototype->get_return_type();
 }
 
 Data_Type Call_Ast::get_data_type() {
@@ -450,7 +451,19 @@ void Call_Ast::set_register(Register_Descriptor * reg) {
 }
 
 void Call_Ast::check_actual_formal_param(Symbol_Table & formal_param_list) {
+    if (this->actual_param_list.size() != formal_param_list.get_table().size()) {
+        error("Actual and formal parameter count do not match", this->lineno);
+        exit(1);
+    }
 
+    int position = 0;
+    for (const auto &param: this->actual_param_list) {
+        position += 1;
+        if (formal_param_list.get_symbol_table_entry_by_index(position).get_data_type() != param->get_data_type()) {
+            error("Actual and formal parameters data types are not matching", this->lineno);
+            exit(1);
+        }
+    }
 }
 
 void Call_Ast::set_actual_param_list(list<Ast *> & param_list) {

@@ -556,9 +556,21 @@ Code_For_Ast & Call_Ast::compile() {
     icode_stmt_list.push_back(new Compute_IC_Stmt(sub, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(-offset), new Register_Addr_Opd(reg_sp)));
     icode_stmt_list.push_back(new Label_IC_Stmt(jal, this->procedure_name));
     icode_stmt_list.push_back(new Compute_IC_Stmt(add, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(-offset), new Register_Addr_Opd(reg_sp)));
-    auto reg = machine_desc_object.get_new_register<int_reg>();
-    this->return_value_reg = machine_desc_object.spim_register_table[v1];
-    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(this->return_value_reg), new Register_Addr_Opd(reg)));
+
+    auto type = this->get_data_type();
+    Tgt_Op mov_op;
+    Register_Descriptor * reg;
+    if (type == int_data_type) {
+        this->return_value_reg = machine_desc_object.spim_register_table[v1];
+        reg = machine_desc_object.get_new_register<int_reg>();
+        mov_op = mov;
+    }
+    else if (type == double_data_type) {
+        this->return_value_reg = machine_desc_object.spim_register_table[f0];
+        reg = machine_desc_object.get_new_register<float_reg>();
+        mov_op = move_d;
+    }
+    icode_stmt_list.push_back(new Move_IC_Stmt(mov_op, new Register_Addr_Opd(this->return_value_reg), new Register_Addr_Opd(reg)));
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
@@ -572,12 +584,25 @@ Code_For_Ast & Return_Ast::compile() {
     auto return_value_code = this->return_value->compile();
     icode_stmt_list.splice(icode_stmt_list.end(), return_value_code.get_icode_list());
 
-    auto v1_reg = machine_desc_object.spim_register_table[v1]; v1_reg->set_register_occupied();
-    icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(v1_reg)));
+
+    auto type = this->get_data_type();
+    Tgt_Op mov_op;
+    Register_Descriptor * ret_reg;
+    if (type == int_data_type) {
+        ret_reg = machine_desc_object.spim_register_table[v1];
+        mov_op = mov;
+    }
+    else if (type == double_data_type) {
+        ret_reg = machine_desc_object.spim_register_table[f0];
+        mov_op = move_d;
+    }
+    ret_reg->set_register_occupied();
+    
+    icode_stmt_list.push_back(new Move_IC_Stmt(mov_op, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(ret_reg)));
     return_value_code.get_reg()->reset_register_occupied();
 
     icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, "epilogue_" + this->proc_name));
-    return *(new Code_For_Ast(icode_stmt_list, v1_reg));
+    return *(new Code_For_Ast(icode_stmt_list, ret_reg));
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
