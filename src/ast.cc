@@ -475,6 +475,7 @@ void Call_Ast::print(ostream & file_buffer) {
     file_buffer << endl << AST_SPACE << "FN CALL: " << this->procedure_name;
     file_buffer << "(";
     for (const auto &ast: this->actual_param_list) {
+        file_buffer << endl << AST_NODE_SPACE;
         ast->print(file_buffer);
     }
     file_buffer << ")";
@@ -507,5 +508,5 @@ Data_Type Return_Ast::get_data_type() {
 }
 
 void Return_Ast::print(ostream & file_buffer) {
-    file_buffer << endl << AST_SPACE << "RETURN "; this->return_value->print(file_buffer);
+    file_buffer << AST_SPACE << "RETURN "; this->return_value->print(file_buffer) ; file_buffer << endl;
 }

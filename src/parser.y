@@ -145,10 +145,10 @@ function_signature:
 ;
 
 fun_param_list:
-	fun_param_declaration { $$ = new list<Symbol_Table_Entry *>; $$->push_back($1); }
+	fun_param_declaration { $$ = new list<Symbol_Table_Entry *>; $$->push_front($1); }
 |	fun_param_declaration ',' fun_param_list {
 		$$ = $3;
-		$$->push_back($1);
+		$$->push_front($1);
 	}
 ;
 
@@ -324,11 +324,11 @@ optional_call_param_list:
 call_param_list:
 	expression {
 		$$ = new list<Ast *>();
-		$$->push_back($1);
+		$$->push_front($1);
 	}
 |	call_param_list ',' expression {
 		$$ = $1;
-		$$->push_back($3);
+		$$->push_front($3);
 	}
 ;
 
@@ -440,6 +440,10 @@ optional_fun_param_list:
 		$$ = new Symbol_Table();
 		$$->set_table_scope(formal);
 		for (auto &entry: *$1) {
+			if ($$->variable_in_symbol_list_check(entry->get_variable_name())) {
+				yyerror("Variable is declared twice");
+				exit(1);
+			}
 			$$->push_symbol(entry);
 		}
 	}

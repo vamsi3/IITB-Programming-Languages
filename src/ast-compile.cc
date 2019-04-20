@@ -532,13 +532,15 @@ Code_For_Ast & Call_Ast::compile() {
     auto procedure_prototype = program_object.get_procedure_prototype(this->procedure_name); procedure_prototype->set_proc_is_called();
     int offset = 0;
     int position = 0;
-    for (const auto &param: this->actual_param_list) {
+    int count = this->actual_param_list.size();
+    for (auto it = this->actual_param_list.rbegin(); it != this->actual_param_list.rend(); it++) {
+        auto param = *it;
         position += 1;
 
         auto param_code = param->compile();
         icode_stmt_list.splice(icode_stmt_list.end(), param_code.get_icode_list());
         
-        auto formal_param_name = procedure_prototype->get_variable_in_formal_list(position);
+        auto formal_param_name = procedure_prototype->get_variable_in_formal_list(count+1-position);
         auto entry = &procedure_prototype->get_formal_param_entry(formal_param_name);
         auto name = entry->get_variable_name();
         auto type = entry->get_data_type();
