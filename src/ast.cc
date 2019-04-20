@@ -455,6 +455,7 @@ void Call_Ast::check_actual_formal_param(Symbol_Table & formal_param_list) {
 
 void Call_Ast::set_actual_param_list(list<Ast *> & param_list) {
     this->actual_param_list = param_list;
+    this->actual_param_list.reverse();
 }
 
 void Call_Ast::print(ostream & file_buffer) {

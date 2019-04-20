@@ -523,29 +523,39 @@ void Sequence_Ast::print_icode(ostream & file_buffer) {
 
 Code_For_Ast & Call_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
-    int position = 0, current_offset = 0;
-    auto procedure_prototype = program_object.get_procedure_prototype(this->procedure_name);
-    auto table = &procedure_prototype->get_formal_param_list();
+    auto procedure_prototype = program_object.get_procedure_prototype(this->procedure_name); procedure_prototype->set_proc_is_called();
+    int offset = 0;
+    int position = 0;
     for (const auto &param: this->actual_param_list) {
         position += 1;
-        auto formal_param_name = procedure_prototype->get_variable_in_formal_list(position);
-        auto entry = &procedure_prototype->get_formal_param_entry(formal_param_name);
+
         auto param_code = param->compile();
         icode_stmt_list.splice(icode_stmt_list.end(), param_code.get_icode_list());
         
+        auto formal_param_name = procedure_prototype->get_variable_in_formal_list(position);
+        auto entry = &procedure_prototype->get_formal_param_entry(formal_param_name);
         auto name = entry->get_variable_name();
-        auto entry_clone = new Symbol_Table_Entry(name, entry->get_data_type(), entry->get_lineno(), sp_ref);
+        auto type = entry->get_data_type();
+        auto entry_clone = new Symbol_Table_Entry(name, type, entry->get_lineno(), sp_ref);
         entry_clone->set_symbol_scope(entry->get_symbol_scope());
-        entry_clone->set_start_offset(entry->get_start_offset());
-        entry_clone->set_end_offset(entry->get_end_offset());
+        entry_clone->set_start_offset(offset);
 
-        icode_stmt_list.push_back(new Move_IC_Stmt(store, new Register_Addr_Opd(param_code.get_reg()), new Mem_Addr_Opd(*entry_clone)));
+        Tgt_Op store_op;
+        if (type == int_data_type) {
+            offset -= 4;
+            store_op = store;
+        } else if (type== double_data_type) {
+            offset -= 8;
+            store_op = store_d;
+        }
+
+        icode_stmt_list.push_back(new Move_IC_Stmt(store_op, new Register_Addr_Opd(param_code.get_reg()), new Mem_Addr_Opd(*entry_clone)));
         param_code.get_reg()->reset_register_occupied();
     }
     auto reg_sp = machine_desc_object.spim_register_table[sp];
-    icode_stmt_list.push_back(new Compute_IC_Stmt(sub, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(12), new Register_Addr_Opd(reg_sp)));
+    icode_stmt_list.push_back(new Compute_IC_Stmt(sub, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(-offset), new Register_Addr_Opd(reg_sp)));
     icode_stmt_list.push_back(new Label_IC_Stmt(jal, this->procedure_name));
-    icode_stmt_list.push_back(new Compute_IC_Stmt(add, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(12), new Register_Addr_Opd(reg_sp)));
+    icode_stmt_list.push_back(new Compute_IC_Stmt(add, new Register_Addr_Opd(reg_sp), new Const_Opd<int>(-offset), new Register_Addr_Opd(reg_sp)));
     auto reg = machine_desc_object.get_new_register<int_reg>();
     this->return_value_reg = machine_desc_object.spim_register_table[v1];
     icode_stmt_list.push_back(new Move_IC_Stmt(mov, new Register_Addr_Opd(this->return_value_reg), new Register_Addr_Opd(reg)));
