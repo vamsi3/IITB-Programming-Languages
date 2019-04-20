@@ -439,7 +439,6 @@ Call_Ast::Call_Ast(string name, int line) {
     this->lineno = line;
     this->ast_num_child = zero_arity;
     this->node_data_type = program_object.get_procedure_prototype(this->procedure_name)->get_return_type();
-    this->return_value_reg = machine_desc_object.spim_register_table[v1];
 }
 
 Data_Type Call_Ast::get_data_type() {

@@ -62,7 +62,15 @@ Register_Descriptor * Ics_Opd::get_reg() {}
 
 Mem_Addr_Opd::Mem_Addr_Opd(Symbol_Table_Entry & se) {
     this->symbol_entry = &se;
-    this->symbol_entry->set_register(machine_desc_object.spim_register_table[fp]);
+    auto ref_offset = this->symbol_entry->get_ref_offset();
+    Spim_Register spim_reg;
+    if (ref_offset == fp_ref) {
+        spim_reg = fp;
+    }
+    else if (ref_offset == sp_ref) {
+        spim_reg = sp;
+    }
+    this->symbol_entry->set_register(machine_desc_object.spim_register_table[spim_reg]);
 }
 
 void Mem_Addr_Opd::print_ics_opd(ostream & file_buffer) {
