@@ -488,7 +488,18 @@ Return_Ast::Return_Ast(Ast * ret_val, string name, int line) {
     this->proc_name = name;
     this->lineno = line;
     this->ast_num_child = unary_arity;
-    this->node_data_type = this->return_value->get_data_type();
+    if (this->return_value) {
+        this->node_data_type = this->return_value->get_data_type();
+    }
+    else {
+        this->node_data_type = void_data_type;
+    }
+    auto procedure_prototype = program_object.get_procedure_prototype(this->proc_name);
+    auto type = procedure_prototype->get_return_type();
+    if (type != this->node_data_type) {
+        error("Return type not matching", this->lineno);
+        exit(1);
+    }
 }
 
 Data_Type Return_Ast::get_data_type() {

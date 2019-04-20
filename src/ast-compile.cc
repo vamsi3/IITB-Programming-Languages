@@ -5,6 +5,12 @@ template class Number_Ast<int>;
 
 bool rel_op_switch;
 
+// =============================================================================
+
+void compile_error(string msg, int lineno) {
+    cout << "cs316: Error: File: " << "" << " Line: " << lineno << ": " << msg << endl;
+    exit(1);
+}
 
 // ============ Ast ============================================================
 
@@ -571,6 +577,7 @@ Code_For_Ast & Call_Ast::compile() {
         mov_op = move_d;
     }
     icode_stmt_list.push_back(new Move_IC_Stmt(mov_op, new Register_Addr_Opd(this->return_value_reg), new Register_Addr_Opd(reg)));
+    this->return_value_reg->reset_register_occupied();
     return *(new Code_For_Ast(icode_stmt_list, reg));
 }
 
@@ -581,28 +588,34 @@ Code_For_Ast & Call_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
 
 Code_For_Ast & Return_Ast::compile() {
     auto icode_stmt_list = list<Icode_Stmt *>();
-    auto return_value_code = this->return_value->compile();
-    icode_stmt_list.splice(icode_stmt_list.end(), return_value_code.get_icode_list());
-
-
     auto type = this->get_data_type();
-    Tgt_Op mov_op;
-    Register_Descriptor * ret_reg;
-    if (type == int_data_type) {
-        ret_reg = machine_desc_object.spim_register_table[v1];
-        mov_op = mov;
-    }
-    else if (type == double_data_type) {
-        ret_reg = machine_desc_object.spim_register_table[f0];
-        mov_op = move_d;
-    }
-    ret_reg->set_register_occupied();
-    
-    icode_stmt_list.push_back(new Move_IC_Stmt(mov_op, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(ret_reg)));
-    return_value_code.get_reg()->reset_register_occupied();
 
-    icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, "epilogue_" + this->proc_name));
-    return *(new Code_For_Ast(icode_stmt_list, ret_reg));
+    if (type == void_data_type) {
+        icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, "epilogue_" + this->proc_name));
+        return *(new Code_For_Ast(icode_stmt_list, NULL));
+    }
+    else {
+        auto return_value_code = this->return_value->compile();
+        icode_stmt_list.splice(icode_stmt_list.end(), return_value_code.get_icode_list());
+
+        Tgt_Op mov_op;
+        Register_Descriptor * ret_reg;
+        if (type == int_data_type) {
+            ret_reg = machine_desc_object.spim_register_table[v1];
+            mov_op = mov;
+        }
+        else if (type == double_data_type) {
+            ret_reg = machine_desc_object.spim_register_table[f0];
+            mov_op = move_d;
+        }
+        ret_reg->set_register_occupied();
+        
+        icode_stmt_list.push_back(new Move_IC_Stmt(mov_op, new Register_Addr_Opd(return_value_code.get_reg()), new Register_Addr_Opd(ret_reg)));
+        return_value_code.get_reg()->reset_register_occupied();
+
+        icode_stmt_list.push_back(new Label_IC_Stmt(ret_inst, "epilogue_" + this->proc_name));
+        return *(new Code_For_Ast(icode_stmt_list, ret_reg));
+    }
 }
 
 Code_For_Ast & Return_Ast::compile_and_optimize_ast(Lra_Outcome & lra) {}
