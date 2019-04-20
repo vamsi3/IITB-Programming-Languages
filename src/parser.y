@@ -144,21 +144,6 @@ function_signature:
 		}
 ;
 
-optional_fun_param_list:
-	/* empty */ {
-		$$ = new Symbol_Table();
-		$$->set_table_scope(formal);
-	}
-|	fun_param_list {
-		$$ = new Symbol_Table();
-		$$->set_table_scope(formal);
-		for (auto &entry: *$1) {
-			$$->push_symbol(entry);
-		}
-	}
-;
-
-
 fun_param_list:
 	fun_param_declaration { $$ = new list<Symbol_Table_Entry *>; $$->push_back($1); }
 |	fun_param_declaration ',' fun_param_list {
@@ -289,6 +274,7 @@ statement_list_basic1:
 |	if_else_statement { $$=$1; }
 |	print_statement { $$=$1; }
 |  	return_statement { $$=$1; }
+| 	function_call ';' { $$=$1; }
 ;
 
 statement_list:
@@ -318,7 +304,6 @@ assignment_statement:
 	}
 ;
 
-	/* change the ast_error below */
 function_call:
 	NAME '(' optional_call_param_list ')' {
 		$1->push_back('_');
@@ -375,7 +360,7 @@ expression:
 variable:
 	NAME {
 		$1->push_back('_');
-		if (local_symbol_table->variable_in_symbol_list_check( *$1)) {
+		if (local_symbol_table->variable_in_symbol_list_check( *$1)) {	
 			$$ = new Name_Ast( *$1, local_symbol_table->get_symbol_table_entry( *$1), yylineno);
 		}
 		else if (formal_symbol_table->variable_in_symbol_list_check( *$1)) {
@@ -445,6 +430,21 @@ sequence:
 		$$ = seq;
 	}
 ;
+
+optional_fun_param_list:
+	/* empty */ {
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
+	}
+|	fun_param_list {
+		$$ = new Symbol_Table();
+		$$->set_table_scope(formal);
+		for (auto &entry: *$1) {
+			$$->push_symbol(entry);
+		}
+	}
+;
+
 
 %%
 
