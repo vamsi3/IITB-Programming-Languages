@@ -12,6 +12,7 @@
 	Symbol_Table* formal_symbol_table;
 	string proc_name;
 	bool ast_error = false;
+	bool in_decl = true;
 %}
 
 %union {
@@ -148,7 +149,9 @@ fun_param_list:
 	fun_param_declaration { $$ = new list<Symbol_Table_Entry *>; $$->push_front($1); }
 |	fun_param_declaration ',' fun_param_list {
 		$$ = $3;
-		$$->push_front($1);
+		if ($1->get_variable_name() != "") {
+			$$->push_front($1);
+		}
 	}
 ;
 
@@ -161,6 +164,22 @@ fun_param_declaration:
 |	FLOAT NAME {
 		$2->push_back('_');
 		$$ = new Symbol_Table_Entry( *$2, double_data_type, yylineno);
+		$$->set_symbol_scope(formal);
+	}
+|	INTEGER {
+		if (!in_decl) {
+			yyerror("Cannot parse the input program");
+			exit(1);
+		}
+		$$ = new Symbol_Table_Entry( *(new string("")), int_data_type, yylineno);
+		$$->set_symbol_scope(formal);
+	}
+|	FLOAT {
+		if (!in_decl) {
+			yyerror("Cannot parse the input program");
+			exit(1);
+		}
+		$$ = new Symbol_Table_Entry( *(new string("")), double_data_type, yylineno);
 		$$->set_symbol_scope(formal);
 	}
 ;
